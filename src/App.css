@@ -1,0 +1,742 @@
+/* === 变量定义 === */
+:root {
+  --primary: #3b82f6;
+  --primary-light: #eff6ff;
+  --success: #10b981;
+  --success-light: #ecfdf5;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --danger-light: #fef2f2;
+  --purple: #8b5cf6;
+  --purple-light: #f5f3ff;
+  
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+  
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  
+  --transition: all 0.2s ease;
+  
+  /* 树形结构变量 */
+  --tree-indent: 52px;          /* 每级缩进距离 */
+  --tree-line-offset: 16px;     /* 连接线距左边距离 */
+  --tree-line-color: #cbd5e1;   /* 连接线颜色 */
+  --node-card-height: 70px;     /* 节点卡片近似高度 */
+  --node-center: 35px;          /* 节点中心位置 */
+  --node-gap: 16px;             /* 节点间距 */
+}
+
+/* === 全局样式 === */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 50%, #fff5f5 100%);
+  min-height: 100vh;
+  color: var(--gray-800);
+}
+
+#root {
+    min-width: 100%;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+}
+
+/* === 头部 === */
+.app-header {
+  background: white;
+  padding: 16px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  flex-shrink: 0;
+}
+
+.title-group h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-group p {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: var(--gray-500);
+}
+
+.total-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.total-input-wrapper label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.money-input-group {
+  display: flex;
+  align-items: center;
+  background: var(--gray-100);
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  padding: 0 12px;
+  transition: var(--transition);
+}
+
+.money-input-group:focus-within {
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.currency-symbol {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-400);
+}
+
+.money-input-group input {
+  width: 180px;
+  padding: 10px 8px;
+  border: none;
+  background: transparent;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  outline: none;
+}
+
+/* === 统计面板 === */
+.stats-panel {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  padding: 16px;
+  background: rgba(255,255,255,0.7);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+}
+
+.stat-icon {
+  font-size: 1.25rem;
+}
+
+.stat-item.success {
+  background: var(--success-light);
+}
+
+.stat-item.success .stat-label {
+  color: var(--success);
+}
+
+.stat-item.error {
+  background: var(--danger-light);
+}
+
+.stat-item.error .stat-label {
+  color: var(--danger);
+}
+
+.app-main {
+  flex: 1;
+  padding: 32px;
+  overflow-x: auto; /* 允许横向滚动 */
+  min-width: 100%;
+  
+  /* 添加以下两行，确保 flex 子元素布局更稳定 */
+  display: flex; 
+  flex-direction: column;
+  align-items: center;
+}
+
+/* App.css 约 268行附近 */
+.tree-container {
+  /* 确保移除 width: max-content */
+  
+  /* 核心设置： */
+  display: inline-block;    /* 允许容器随内容撑大（解决滚动背景截断） */
+  max-width: fit-content;
+  width: auto;              /* 恢复默认宽度行为，让它能自适应伸展 */
+  
+  padding: 16px;
+  vertical-align: top;
+  box-sizing: border-box;   /* 确保 padding 包含在宽度计算内 */
+}
+
+/* ============================================
+   树形结构 - 核心样式
+   ============================================ */
+
+.tree-node {
+  display: flex;
+  position: relative;
+}
+
+/* 根节点无缩进 */
+.tree-node.is-root {
+  padding-left: 0;
+}
+
+/* 非根节点需要左侧空间放连接线 */
+.tree-node:not(.is-root) {
+  padding-left: var(--tree-indent);
+}
+
+/* ============================================
+   连接线样式
+   ============================================ */
+
+.connector {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--tree-indent);
+  height: 100%;
+  pointer-events: none;
+}
+
+/* 垂直线上半部分：从顶部到节点中心 */
+.connector-v-top {
+  position: absolute;
+  left: var(--tree-line-offset);
+  top: 0;
+  width: 2px;
+  height: var(--node-center);
+  background: var(--tree-line-color);
+}
+
+/* 垂直线下半部分：从节点中心到底部（连接下一个兄弟节点） */
+.connector-v-bottom {
+  position: absolute;
+  left: var(--tree-line-offset);
+  top: var(--node-center);
+  width: 2px;
+  bottom: 0;
+  background: var(--tree-line-color);
+}
+
+/* 水平线：从垂直线连接到节点卡片 */
+.connector-h {
+  position: absolute;
+  left: var(--tree-line-offset);
+  top: var(--node-center);
+  width: calc(var(--tree-indent) - var(--tree-line-offset));
+  height: 2px;
+  background: var(--tree-line-color);
+}
+
+/* 节点内容区域 */
+.node-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 子节点容器 */
+.tree-children {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ============================================
+   节点卡片样式
+   ============================================ */
+
+.node-card {
+    max-width: 600px;
+    padding: 5px;
+}
+
+.node-card-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 2px solid transparent;
+  transition: var(--transition);
+  position: relative;
+  min-height: var(--node-card-height);
+}
+
+.node-card-content:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateX(2px);
+}
+
+.node-card-content.root-card {
+  background: linear-gradient(135deg, var(--gray-800), var(--gray-700));
+  color: white;
+}
+
+.node-card-content.has-error {
+  border-color: var(--danger);
+  background: var(--danger-light);
+}
+
+/* 折叠按钮 */
+.collapse-btn {
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--gray-300);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-500);
+  transition: var(--transition);
+  z-index: 10;
+}
+
+.collapse-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.collapse-btn svg {
+  transition: transform 0.2s ease;
+}
+
+/* 规则标签 */
+.rule-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.rule-icon {
+  font-size: 0.9rem;
+}
+
+.rule-label {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .rule-label {
+    display: inline;
+  }
+}
+
+/* 节点信息区 */
+.node-info {
+  flex: 1;
+  min-width: 180px;
+}
+
+.name-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: 600;
+  color: inherit;
+  padding: 4px 0;
+  outline: none;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+
+.root-card .name-input {
+  color: white;
+  font-size: 1.1rem;
+}
+
+.name-input:focus {
+  border-bottom-color: var(--primary);
+}
+
+.root-card .name-input:focus {
+  border-bottom-color: rgba(255,255,255,0.5);
+}
+
+.rule-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.rule-select {
+  padding: 6px 10px;
+  border: 1px solid var(--gray-400);
+  border-radius: var(--radius-sm);
+  background: var(--gray-200);
+  font-size: 0.85rem;
+  color: var(--gray-700);
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition);
+}
+
+.rule-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.value-input-group {
+  display: flex;
+  align-items: center;
+  background: var(--gray-200);
+  border: 1px solid var(--gray-400);
+  border-radius: var(--radius-sm);
+  padding: 0 8px;
+  transition: var(--transition);
+}
+
+.value-input-group:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.value-input {
+  width: 70px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: black;
+  text-align: right;
+  outline: none;
+}
+
+.value-unit {
+  font-size: 0.8rem;
+  color: var(--gray-400);
+  margin-left: 2px;
+}
+
+/* 结果区域 */
+.node-result {
+  text-align: right;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  white-space: nowrap;
+}
+
+.root-card .amount {
+  color: white;
+  font-size: 1.3rem;
+}
+
+.amount.error {
+  color: var(--danger);
+}
+
+.percent-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: 4px;
+}
+
+.progress-bar {
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+  width: 80px;
+  margin-left: auto;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.error-tip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: var(--danger);
+  margin-top: 4px;
+}
+
+/* 操作按钮 */
+.node-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 8px;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.node-card-content:hover .node-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.action-btn svg{
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2px;
+}
+
+.action-btn.add {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.action-btn.add:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.action-btn.delete {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.action-btn.delete:hover {
+  background: var(--danger);
+  color: white;
+}
+
+/* 折叠提示 */
+.collapsed-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  margin-top: 0;
+  background: var(--gray-100);
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.collapsed-hint:hover {
+  background: var(--gray-200);
+  color: var(--gray-700);
+  border-color: var(--gray-400);
+}
+
+/* === 页脚/图例 === */
+.app-footer {
+  padding: 16px 32px;
+  background: white;
+  border-top: 1px solid var(--gray-200);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.legend-title {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* === 响应式 === */
+@media (max-width: 768px) {
+  :root {
+    --tree-indent: 40px;
+    --tree-line-offset: 12px;
+  }
+  
+  .app-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .stats-panel {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .stat-item {
+    padding: 6px 12px;
+  }
+  
+  .stat-value {
+    font-size: 1.2rem;
+  }
+  
+  .app-main {
+    padding: 16px;
+  }
+  
+  .node-card-content {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  
+  .node-actions {
+    opacity: 1;
+    flex-direction: row;
+    position: absolute;
+    right: 8px;
+    top: 8px;
+  }
+  
+  .node-result {
+    min-width: 100%;
+    text-align: left;
+    padding-top: 8px;
+    border-top: 1px solid var(--gray-100);
+  }
+  
+  .progress-bar {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .legend {
+    gap: 12px;
+  }
+}
+
+/* === 动画 === */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.tree-node {
+  animation: fadeSlideIn 0.3s ease;
+}
+
+/* 隐藏数字输入框的滚动按钮 */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.3;
+}
+
+input[type="number"]:hover::-webkit-inner-spin-button,
+input[type="number"]:hover::-webkit-outer-spin-button {
+  opacity: 1;
+}
