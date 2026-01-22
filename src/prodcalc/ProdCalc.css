@@ -42,7 +42,7 @@
   /* 连接线颜色 */
   --node-card-height: 70px;
   /* 节点卡片近似高度 */
-  --node-center: 51px;
+  --node-center: 51px; /* node-card-height * 0.5 + node-gap */
   /* 节点中心位置 */
   --node-gap: 16px;
   /* 节点间距 */
@@ -160,6 +160,7 @@ body {
 
 .header-right {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
@@ -210,7 +211,8 @@ body {
 /* 保持原有的 money-input-group 样式，可能需要微调对齐 */
 .total-input-wrapper {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  /* flex-direction: row; */
   align-items: flex-end;
   /* 标签右对齐 */
 }
@@ -508,7 +510,7 @@ body {
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  flex-wrap: wrap;
+  /* flex-wrap: wrap; */
 }
 
 .rule-select {
@@ -544,7 +546,8 @@ body {
 }
 
 .value-input {
-  width: 80px;
+  width: auto;
+  max-width: 80px;
   padding: 6px 4px;
   border: none;
   background: transparent;
@@ -961,8 +964,18 @@ body {
 /* === 响应式 === */
 @media (max-width: 768px) {
   :root {
-    --tree-indent: 40px;
-    --tree-line-offset: 12px;
+    --tree-indent: 24px;
+    --tree-line-offset: 6px;
+    --node-card-height: auto;
+    --node-gap: 8px;
+  }
+
+  .node-card {
+    min-width: fit-content !important;
+  }
+  
+  .rule-badge {
+    display: none;
   }
 
   .app-header {

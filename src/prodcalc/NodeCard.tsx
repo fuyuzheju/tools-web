@@ -92,7 +92,6 @@ const NodeCard: React.FC<{
                 className="rule-badge"
                 style={{ backgroundColor: ruleConfig.bg, color: ruleConfig.color }}
               >
-                <span className="rule-icon">{ruleConfig.icon}</span>
                 <span className="rule-label">{ruleConfig.label}</span>
               </div>
             )}
