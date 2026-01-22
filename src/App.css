@@ -3,8 +3,9 @@
   --primary: #3b82f6;
   --primary-light: #eff6ff;
   --success: #10b981;
-  --success-light: #ecfdf5;
-  --warning: #f59e0b;
+  --success-light: #deffef;
+  --warning: #faa719;
+  --warning-light: #f5d7a3;
   --danger: #ef4444;
   --danger-light: #fef2f2;
   --purple: #8b5cf6;
@@ -37,7 +38,7 @@
   --tree-line-offset: 16px;     /* 连接线距左边距离 */
   --tree-line-color: #cbd5e1;   /* 连接线颜色 */
   --node-card-height: 70px;     /* 节点卡片近似高度 */
-  --node-center: 35px;          /* 节点中心位置 */
+  --node-center: 51px;          /* 节点中心位置 */
   --node-gap: 16px;             /* 节点间距 */
 }
 
@@ -151,6 +152,62 @@ body {
   outline: none;
 }
 
+.header-right {
+  display: flex;
+  gap: 16px;
+}
+
+/* 操作按钮组 */
+.action-group {
+  display: flex;
+  gap: 12px;
+}
+
+/* 按钮样式 */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.icon-btn.secondary {
+  background-color: white;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.icon-btn.secondary:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  color: #1f2937;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 垂直分割线 */
+.divider-v {
+  width: 1px;
+  height: inherit;
+  background-color: #e5e7eb;
+}
+
+/* 保持原有的 money-input-group 样式，可能需要微调对齐 */
+.total-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* 标签右对齐 */
+}
+
 /* === 统计面板 === */
 .stats-panel {
   display: flex;
@@ -186,12 +243,16 @@ body {
   font-size: 1.25rem;
 }
 
-.stat-item.success {
+.stat-item.normal {
   background: var(--success-light);
 }
 
-.stat-item.success .stat-label {
+.stat-item.normal .stat-label {
   color: var(--success);
+}
+
+.stat-item.warning {
+  background: var(--warning-light);
 }
 
 .stat-item.error {
@@ -309,19 +370,20 @@ body {
    ============================================ */
 
 .node-card {
-    max-width: 600px;
-    padding: 5px;
+    min-width: 700px;
+    width: fit-content;
+    padding: calc(var(--node-gap)/2);
 }
 
 .node-card-content {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 14px 20px;
+  padding: 8px 20px;
   background: white;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  border: 2px solid transparent;
+  border: 1px solid black;
   transition: var(--transition);
   position: relative;
   min-height: var(--node-card-height);
@@ -345,12 +407,12 @@ body {
 /* 折叠按钮 */
 .collapse-btn {
   position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(calc(var(--node-card-height) * -0.5));
+  left: 0;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  /* border-radius: 50%; */
+  padding: 0;
   border: 2px solid var(--gray-300);
   background: white;
   cursor: pointer;
@@ -471,7 +533,7 @@ body {
 }
 
 .value-input {
-  width: 70px;
+  width: 80px;
   padding: 6px 4px;
   border: none;
   background: transparent;
@@ -509,6 +571,19 @@ body {
 
 .amount.error {
   color: var(--danger);
+}
+
+.node-unallocated {
+  font-size: 0.8rem;
+  transform: translateY(-70%);
+}
+
+.node-unallocated.error {
+  color: var(--danger);
+}
+
+.node-unallocated.warning {
+  color: var(--warning);
 }
 
 .percent-label {
@@ -601,7 +676,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 16px;
+  padding: 5px 8px;
   margin-top: 0;
   background: var(--gray-100);
   border: 2px dashed var(--gray-300);

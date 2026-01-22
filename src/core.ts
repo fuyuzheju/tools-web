@@ -13,6 +13,9 @@ export interface NodeRule {
   type: RuleType;
   value: number; // 如果是 REMAINDER，此值通常忽略，或者作为权重
 }
+// src/core.ts
+
+// ... RuleType 和 NodeRule 保持不变 ...
 
 export interface AllocNode {
   id: string;
@@ -21,14 +24,14 @@ export interface AllocNode {
   children: AllocNode[];
 }
 
-// 计算结果表，key是节点ID
+// 修改 1: 扩充计算结果接口
 export type CalculationMap = Record<string, {
-  amount: number;   // 最终分到的钱
-  percentOfParent: number; // 占父节点的实际比例
-  isError: boolean; // 是否出现负数/超额
+  amount: number;          // 最终分到的钱
+  percentOfParent: number; // 占比
+  isError: boolean;        // 是否自身金额为负（接收到了负资产）
+  isWarning: boolean;
+  unallocated: number;     // 新增：该节点未分配给子节点的余额
 }>;
-
-// --- 核心计算引擎 (纯函数) ---
 
 export const calculateTree = (
   node: AllocNode,
@@ -36,55 +39,64 @@ export const calculateTree = (
   resultMap: CalculationMap = {}
 ): CalculationMap => {
   
-  // 1. 记录当前节点的计算结果
+  // 初始化当前节点结果
+  // 注意：初始 unallocated 设为 0，会在函数末尾更新
   resultMap[node.id] = {
     amount: inputAmount,
-    percentOfParent: 0, // 根节点或顶层由调用者决定，此处暂存
-    isError: inputAmount < 0
+    percentOfParent: 0, 
+    isError: inputAmount < -0.01, // 初始化判断，函数末尾计算完unallocated后仍然会判断
+    isWarning: false, // 初始化，在函数末尾更新
+    unallocated: inputAmount, 
   };
 
   if (!node.children || node.children.length === 0) {
     return resultMap;
   }
 
-  // 2. 分类子节点
   const fixedNodes = node.children.filter(c => c.rule.type === RuleType.FIXED);
   const percentNodes = node.children.filter(c => c.rule.type === RuleType.PERCENTAGE);
   const remainderNodes = node.children.filter(c => c.rule.type === RuleType.REMAINDER);
 
   let remainingAmount = inputAmount;
 
-  // 3. 第一轮：扣除固定金额 (优先级最高)
+  // 1. 扣除固定金额
   fixedNodes.forEach(child => {
     const allocated = child.rule.value;
     remainingAmount -= allocated;
-    
-    // 递归计算子树
     calculateTree(child, allocated, resultMap);
-    
-    // 补全子节点的元数据
     resultMap[child.id].percentOfParent = inputAmount === 0 ? 0 : (allocated / inputAmount);
   });
 
-  // 4. 第二轮：扣除百分比 (基于父节点总额)
+  // 2. 扣除百分比
   percentNodes.forEach(child => {
     const allocated = inputAmount * (child.rule.value / 100);
     remainingAmount -= allocated;
-
     calculateTree(child, allocated, resultMap);
     resultMap[child.id].percentOfParent = child.rule.value / 100;
   });
 
-  // 5. 第三轮：分配剩余部分
+  // 3. 分配剩余部分 & 计算未分配余额
   if (remainderNodes.length > 0) {
-    // 如果有多个剩余节点，平分剩余额度 (你也可以改为按权重分)
+    // 如果有"吸纳剩余"的节点，它们会把剩余的钱（无论是正还是负）都拿走
+    // 所以此时父节点的 unallocated 必定为 0
     const amountPerNode = remainingAmount / remainderNodes.length;
-    
     remainderNodes.forEach(child => {
       calculateTree(child, amountPerNode, resultMap);
       resultMap[child.id].percentOfParent = inputAmount === 0 ? 0 : (amountPerNode / inputAmount);
     });
+    resultMap[node.id].unallocated = 0;
+  } else {
+    // 修改 2: 如果没有"吸纳剩余"节点，剩余的钱（正数或负数）就留在了父节点手里
+    // 只有当 remainingAmount > 0 时我们视作"未分配"（Warning）
+    // 如果 remainingAmount < 0，其实也是 Error（超额分配），但我们主要通过 isError 标记来追踪
+    resultMap[node.id].unallocated = remainingAmount;
   }
+
+  // 判断isError
+  resultMap[node.id].isError = inputAmount < -0.01 || resultMap[node.id].unallocated < -0.01;
+  resultMap[node.id].isWarning = (!resultMap[node.id].isError) &&
+                                 (resultMap[node.id].unallocated > 0.01) &&
+                                 (node.children.length > 0);
 
   return resultMap;
 };

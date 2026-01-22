@@ -1,306 +1,226 @@
-import React, { useMemo } from 'react';
-import { useStore } from './store';
-import { RuleType, type AllocNode } from './core';
+import React, { useMemo, useRef } from 'react';
+import { type AllocNode } from './core';
 import './App.css';
+import { useStore, type ProjectData } from './store'; // 引入类型
+import NodeCard from './NodeCard';
+import RULE_CONFIG from './config';
 
-// --- 工具函数 ---
-const formatMoney = (val: number) =>
-  new Intl.NumberFormat('zh-CN', {
-    style: 'currency',
-    currency: 'CNY',
-    maximumFractionDigits: 0
-  }).format(val);
+// ... StatsPanel 代码保持不变 ...
+// (为了节省篇幅，StatsPanel 代码省略，请保留原样)
+type AppStatus = 'error' | 'warning' | 'normal';
 
-const formatPercent = (val: number) => `${(val * 100).toFixed(1)}%`;
-
-// --- 规则类型配置 ---
-const RULE_CONFIG = {
-  [RuleType.PERCENTAGE]: { label: '比例', color: '#3b82f6', bg: '#eff6ff', icon: '%' },
-  [RuleType.FIXED]: { label: '定额', color: '#10b981', bg: '#ecfdf5', icon: '¥' },
-  [RuleType.REMAINDER]: { label: '剩余', color: '#8b5cf6', bg: '#f5f3ff', icon: '∞' },
-};
-
-// --- 进度条组件 ---
-const ProgressBar: React.FC<{ percent: number; color: string }> = ({ percent, color }) => {
-  const width = Math.min(Math.max(percent * 100, 0), 100);
-  return (
-    <div className="progress-bar">
-      <div
-        className="progress-fill"
-        style={{ width: `${width}%`, backgroundColor: color }}
-      />
-    </div>
-  );
-};
-
-// --- 节点卡片组件 ---
-const NodeCard: React.FC<{
-  node: AllocNode;
-  level: number;
-  isLast: boolean;
-}> = ({ node, level, isLast }) => {
-  const {
-    calculationResult,
-    updateNodeRule,
-    addNode,
-    updateNodeName,
-    deleteNode,
-    collapsedNodes,
-    toggleCollapse
-  } = useStore();
-
-  const result = calculationResult[node.id] || { amount: 0, percentOfParent: 0, isError: false };
-  const isRoot = level === 0;
-  const hasChildren = node.children.length > 0;
-  const isCollapsed = collapsedNodes.has(node.id);
-  const ruleConfig = RULE_CONFIG[node.rule.type];
-
-  return (
-    <div className={`tree-node ${isRoot ? 'is-root' : ''} ${isLast ? 'is-last' : ''}`}>
-
-      {/* 连接线 - 只有非根节点才显示 */}
-      {!isRoot && (
-        <div className="connector">
-          {/* 垂直线上半部分：从上方到节点中心 */}
-          <div className="connector-v-top" />
-          {/* 垂直线下半部分：从节点中心到底部，只在非最后节点显示 */}
-          {!isLast && <div className="connector-v-bottom" />}
-          {/* 水平线：从垂直线到节点卡片 */}
-          <div className="connector-h" />
-        </div>
-      )}
-
-      {/* 节点内容区域 */}
-      <div className="node-content">
-        {/* 节点主卡片 */}
-        <div className="node-card">
-          <div className={`node-card-content ${result.isError ? 'has-error' : ''} ${isRoot ? 'root-card' : ''}`}>
-
-            {/* 折叠按钮 */}
-            {hasChildren && (
-              <button
-                className="collapse-btn"
-                onClick={() => toggleCollapse(node.id)}
-                title={isCollapsed ? '展开' : '折叠'}
-              >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
-                >
-                  <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" fill="none" strokeWidth="1.5" />
-                </svg>
-              </button>
-            )}
-
-            {/* 左侧：规则标签 */}
-            {!isRoot && (
-              <div
-                className="rule-badge"
-                style={{ backgroundColor: ruleConfig.bg, color: ruleConfig.color }}
-              >
-                <span className="rule-icon">{ruleConfig.icon}</span>
-                <span className="rule-label">{ruleConfig.label}</span>
-              </div>
-            )}
-
-            {/* 中间：信息区 */}
-            <div className="node-info">
-              <input
-                className="name-input"
-                value={node.name}
-                onChange={(e) => updateNodeName(node.id, e.target.value)}
-                placeholder="输入名称"
-              />
-
-              {!isRoot && (
-                <div className="rule-editor">
-                  <select
-                    className="rule-select"
-                    value={node.rule.type}
-                    onChange={(e) => updateNodeRule(node.id, { type: e.target.value as RuleType })}
-                  >
-                    <option value={RuleType.PERCENTAGE}>比例分配</option>
-                    <option value={RuleType.FIXED}>定额分配</option>
-                    <option value={RuleType.REMAINDER}>吸纳剩余</option>
-                  </select>
-
-                  {node.rule.type !== RuleType.REMAINDER && (
-                    <div className="value-input-group">
-                      <input
-                        type="number"
-                        className="value-input"
-                        value={node.rule.value}
-                        onChange={(e) => updateNodeRule(node.id, { value: Number(e.target.value) })}
-                        min={0}
-                      />
-                      <span className="value-unit">
-                        {node.rule.type === RuleType.PERCENTAGE ? '%' : '元'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 右侧：金额和进度 */}
-            <div className="node-result">
-              <div className={`amount ${result.isError ? 'error' : ''}`}>
-                {formatMoney(result.amount)}
-              </div>
-              {!isRoot && (
-                <>
-                  <div className="percent-label">
-                    占比 {formatPercent(result.percentOfParent)}
-                  </div>
-                  <ProgressBar
-                    percent={result.percentOfParent}
-                    color={result.isError ? '#ef4444' : ruleConfig.color}
-                  />
-                </>
-              )}
-              {result.isError && (
-                <div className="error-tip">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                    <path d="M6 0C2.7 0 0 2.7 0 6s2.7 6 6 6 6-2.7 6-6S9.3 0 6 0zm.5 9h-1V8h1v1zm0-2h-1V3h1v4z" />
-                  </svg>
-                  资金不足
-                </div>
-              )}
-            </div>
-
-            {/* 操作按钮 */}
-            <div className="node-actions">
-              <button
-                className="action-btn add"
-                onClick={() => addNode(node.id, '新部门')}
-                title="添加子节点"
-              >
-                <svg viewBox="0 0 14 14">
-                  <path d="M7 3v8M3 7h8" />
-                </svg>
-              </button>
-
-              {!isRoot && (
-                <button
-                  className="action-btn delete"
-                  onClick={() => {
-                    if (hasChildren) {
-                      if (confirm(`确定删除"${node.name}"及其所有子节点吗？`)) {
-                        deleteNode(node.id);
-                      }
-                    } else {
-                      deleteNode(node.id);
-                    }
-                  }}
-                  title="删除节点"
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 7h8" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 子节点容器 */}
-        {hasChildren && !isCollapsed && (
-          <div className="tree-children">
-            {node.children.map((child, idx) => (
-              <NodeCard
-                key={child.id}
-                node={child}
-                level={level + 1}
-                isLast={idx === node.children.length - 1}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* 折叠提示 */}
-        {hasChildren && isCollapsed && (
-          <div className="collapsed-hint" onClick={() => toggleCollapse(node.id)}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M5 3l4 4-4 4" />
-            </svg>
-            <span>{node.children.length} 个子节点已折叠，点击展开</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// --- 统计面板 ---
 const StatsPanel: React.FC = () => {
-  const { calculationResult, rootNode } = useStore();
-
-  const stats = useMemo(() => {
-    const countNodes = (node: AllocNode): number =>
-      1 + node.children.reduce((sum, c) => sum + countNodes(c), 0);
-
-    const countLeaves = (node: AllocNode): number =>
-      node.children.length === 0 ? 1 : node.children.reduce((sum, c) => sum + countLeaves(c), 0);
-
-    const hasError = Object.values(calculationResult).some(r => r.isError);
-
-    return {
-      totalNodes: countNodes(rootNode),
-      leafCount: countLeaves(rootNode),
-      hasError
-    };
-  }, [calculationResult, rootNode]);
-
-  return (
-    <div className="stats-panel">
-      <div className="stat-item">
-        <span className="stat-value">{stats.totalNodes}</span>
-        <span className="stat-label">总节点</span>
+    const { calculationResult, rootNode } = useStore();
+  
+    const { stats, appStatus, statusLabel, statusIcon } = useMemo(() => {
+      // 递归计数逻辑保持不变
+      const countNodes = (node: AllocNode): number =>
+        1 + node.children.reduce((sum, c) => sum + countNodes(c), 0);
+      const countLeaves = (node: AllocNode): number =>
+        node.children.length === 0 ? 1 : node.children.reduce((sum, c) => sum + countLeaves(c), 0);
+  
+      const allResults = Object.values(calculationResult);
+  
+      // --- 核心状态判断逻辑 ---
+      let currentStatus: AppStatus = 'normal';
+      
+      // 1. 检查是否有负数 (Error)
+      // 条件：分配到的金额是负数 OR 分配给子节点后剩余金额是负数(超额)
+      const hasError = allResults.some(r => r.isError);
+  
+      // 2. 检查是否有未分配完的余额 (Warning)
+      // 条件：不是 Error 且 有未分配的余额
+      const hasWarning = !hasError && allResults.some(r => r.isWarning);
+  
+      if (hasError) currentStatus = 'error';
+      else if (hasWarning) currentStatus = 'warning';
+  
+      // 3. 配置 UI 文案和图标
+      const config = {
+        error:   { label: '存在超额', icon: '️❌' },
+        warning: { label: '有未分配', icon: '⚠️' },
+        normal:  { label: '分配完美', icon: '✅' }
+      };
+  
+      return {
+        stats: {
+          totalNodes: countNodes(rootNode),
+          leafCount: countLeaves(rootNode),
+        },
+        appStatus: currentStatus,
+        statusLabel: config[currentStatus].label,
+        statusIcon: config[currentStatus].icon
+      };
+    }, [calculationResult, rootNode]);
+  
+    // 根据状态动态生成 className
+    // CSS 中需添加 .stat-item.warning { color: #f59e0b; bg: #fffbeb }
+    return (
+      <div className="stats-panel">
+        <div className="stat-item">
+          <span className="stat-value">{stats.totalNodes}</span>
+          <span className="stat-label">总节点</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-value">{stats.leafCount}</span>
+          <span className="stat-label">末级分配</span>
+        </div>
+        <div className={`stat-item ${appStatus}`}>
+          <span className="stat-icon">{statusIcon}</span>
+          <span className="stat-label">{statusLabel}</span>
+        </div>
       </div>
-      <div className="stat-item">
-        <span className="stat-value">{stats.leafCount}</span>
-        <span className="stat-label">末级分配</span>
-      </div>
-      <div className={`stat-item ${stats.hasError ? 'error' : 'success'}`}>
-        <span className="stat-icon">{stats.hasError ? '⚠️' : '✓'}</span>
-        <span className="stat-label">{stats.hasError ? '存在超额' : '分配正常'}</span>
-      </div>
-    </div>
-  );
-};
+    );
+  };
 
 // --- 主应用 ---
 export default function App() {
-  const { totalValue, setTotalValue, rootNode } = useStore();
+  const { totalValue, setTotalValue, rootNode, loadProject } = useStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- 保存文件逻辑 ---
+  const handleSave = async () => {
+    // 1. 准备数据
+    const data: ProjectData = {
+      version: '1.0.0',
+      totalValue,
+      rootNode
+    };
+    const jsonString = JSON.stringify(data, null, 2);
+
+    // 2. 尝试使用现代 File System Access API (支持 "另存为" 弹窗)
+    // 目前支持: Chrome, Edge, Opera (需 HTTPS 或 localhost)
+    if ('showSaveFilePicker' in window) {
+      try {
+        const options = {
+          suggestedName: `${rootNode.name || 'allocation'}-data.json`,
+          types: [
+            {
+              description: 'JSON Files',
+              accept: { 'application/json': ['.json'] },
+            },
+          ],
+        };
+        // @ts-expect-error: new API that typescript does not recognize
+        const fileHandle = await window.showSaveFilePicker(options);
+        const writable = await fileHandle.createWritable();
+        await writable.write(jsonString);
+        await writable.close();
+        return; // 保存成功，直接返回
+      } catch (err: any) {
+        // 如果用户点了取消，或者 API 调用失败，什么都不做或降级处理
+        if (err.name === 'AbortError') return;
+        console.warn('File System Access API failed, falling back to download.', err);
+      }
+    }
+
+    // 3. 降级方案 (兼容 Firefox, Safari 或 旧版浏览器)
+    // 弹出一个输入框询问文件名
+    let fileName = prompt('请输入文件名', `${rootNode.name || 'allocation'}-data.json`);
+    if (!fileName) return; // 用户点击取消
+    if (!fileName.endsWith('.json')) fileName += '.json';
+
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  // --- 打开文件逻辑 ---
+  const handleOpenFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = event.target?.result as string;
+        const data = JSON.parse(json);
+        
+        // 简单的格式校验
+        if (typeof data.totalValue === 'number' && data.rootNode && data.rootNode.id) {
+          loadProject(data);
+        } else {
+          alert('文件格式错误：无法识别的数据结构');
+        }
+      } catch (err) {
+        alert('文件读取失败：无效的 JSON 文件');
+        console.error(err);
+      }
+    };
+    reader.readAsText(file);
+    
+    // 清空 input 使得同一个文件可以被重复选择
+    e.target.value = '';
+  };
 
   return (
     <div className="app">
+      {/* 隐藏的文件输入框 */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept=".json"
+        onChange={handleFileChange}
+      />
+
       {/* 顶部导航 */}
       <header className="app-header">
         <div className="header-left">
-          <div className="logo">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="8" fill="url(#gradient)" />
-              <path d="M16 8v16M8 16h16" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-              <path d="M10 12l6-4 6 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M10 20l6 4 6-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <defs>
-                <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
-                  <stop stopColor="#3b82f6" />
-                  <stop offset="1" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <div className="title-group">
-            <h1>产值分配计算器</h1>
-            <p>可视化配置 · 实时计算 · 灵活分配</p>
-          </div>
+            {/* Logo 保持不变 */}
+            <div className="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="8" fill="url(#gradient)" />
+                <path d="M16 8v16M8 16h16" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M10 12l6-4 6 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M10 20l6 4 6-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <defs>
+                    <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
+                    <stop stopColor="#3b82f6" />
+                    <stop offset="1" stopColor="#8b5cf6" />
+                    </linearGradient>
+                </defs>
+                </svg>
+            </div>
+            <div className="title-group">
+                <h1>产值分配计算器</h1>
+                <p>可视化配置 · 实时计算 · 灵活分配</p>
+            </div>
         </div>
 
         <div className="header-right">
+          {/* 新增：操作按钮组 */}
+          <div className="action-group">
+            <button className="icon-btn secondary" onClick={handleOpenFile} title="打开文件">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="M3 15h6" /><path d="M6 12l3 3-3 3" />
+              </svg>
+              <span>打开</span>
+            </button>
+            <button className="icon-btn secondary" onClick={handleSave} title="保存文件">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              <span>保存</span>
+            </button>
+          </div>
+
+          <div className="divider-v"></div>
+
           <div className="total-input-wrapper">
             <label>项目总产值</label>
             <div className="money-input-group">
