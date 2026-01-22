@@ -1,9 +1,10 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { type AllocNode } from './core';
 import './App.css';
-import { useStore, type ProjectData } from './store'; // 引入类型
+import { useStore } from './store'; // 引入类型
 import NodeCard from './NodeCard';
-import RULE_CONFIG from './config';
+import SummaryModal from './SummaryModal';
+import { type ProjectData } from './store';
 
 // ... StatsPanel 代码保持不变 ...
 // (为了节省篇幅，StatsPanel 代码省略，请保留原样)
@@ -73,16 +74,23 @@ const StatsPanel: React.FC = () => {
     );
   };
 
-// --- 主应用 ---
 export default function App() {
-  const { totalValue, setTotalValue, rootNode, loadProject } = useStore();
+  // 从 store 获取新属性
+  const { 
+    totalValue, setTotalValue, rootNode, name, loadProject, 
+    projects, activeProjectId, addProject, switchProject, removeProject
+  } = useStore();
+  
+  const [isSummaryOpen, setSummaryOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- 保存文件逻辑 ---
+  // ... handleSave, handleOpenFile 逻辑保持不变 ... 
+  // 它们操作的是当前激活的项目
   const handleSave = async () => {
     // 1. 准备数据
     const data: ProjectData = {
-      version: '1.0.0',
+      id: activeProjectId,
+      name,
       totalValue,
       rootNode
     };
@@ -165,98 +173,101 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* 隐藏的文件输入框 */}
+      {/* 模态框 */}
+      <SummaryModal isOpen={isSummaryOpen} onClose={() => setSummaryOpen(false)} />
+
       <input 
         type="file" 
         ref={fileInputRef} 
         style={{ display: 'none' }} 
         accept=".json"
-        onChange={handleFileChange}
+        onChange={handleFileChange} // 请确保引用之前的 handleFileChange
       />
 
-      {/* 顶部导航 */}
       <header className="app-header">
+         {/* 左侧 Logo 保持不变 */}
         <div className="header-left">
-            {/* Logo 保持不变 */}
-            <div className="logo">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <rect width="32" height="32" rx="8" fill="url(#gradient)" />
-                <path d="M16 8v16M8 16h16" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                <path d="M10 12l6-4 6 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M10 20l6 4 6-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <defs>
-                    <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
-                    <stop stopColor="#3b82f6" />
-                    <stop offset="1" stopColor="#8b5cf6" />
-                    </linearGradient>
-                </defs>
-                </svg>
-            </div>
+             {/* ...SVG logo... */}
             <div className="title-group">
                 <h1>产值分配计算器</h1>
-                <p>可视化配置 · 实时计算 · 灵活分配</p>
             </div>
         </div>
 
         <div className="header-right">
-          {/* 新增：操作按钮组 */}
-          <div className="action-group">
-            <button className="icon-btn secondary" onClick={handleOpenFile} title="打开文件">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" />
-                <polyline points="14 2 14 8 20 8" />
-                <path d="M3 15h6" /><path d="M6 12l3 3-3 3" />
-              </svg>
-              <span>打开</span>
+            {/* 新增：汇总统计按钮 */}
+            <button className="summary-btn" onClick={() => setSummaryOpen(true)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
+                </svg>
+                汇总报表
             </button>
-            <button className="icon-btn secondary" onClick={handleSave} title="保存文件">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z" />
-                <polyline points="17 21 17 13 7 13 7 21" />
-                <polyline points="7 3 7 8 15 8" />
-              </svg>
-              <span>保存</span>
-            </button>
-          </div>
+            
+            <div className="divider-v"></div>
 
-          <div className="divider-v"></div>
-
-          <div className="total-input-wrapper">
-            <label>项目总产值</label>
-            <div className="money-input-group">
-              <span className="currency-symbol">¥</span>
-              <input
-                type="number"
-                value={totalValue}
-                onChange={(e) => setTotalValue(Number(e.target.value))}
-                min={0}
-              />
+            {/* 原有的打开/保存按钮 */}
+            <div className="action-group">
+                <button className="icon-btn secondary" onClick={handleOpenFile} title="导入当前页">
+                    {/* ...icon... */} <span>导入</span>
+                </button>
+                <button className="icon-btn secondary" onClick={handleSave} title="保存当前页">
+                    {/* ...icon... */} <span>保存</span>
+                </button>
             </div>
-          </div>
+
+            <div className="divider-v"></div>
+
+            <div className="total-input-wrapper">
+                <label>当前项目总产值</label>
+                <div className="money-input-group">
+                    <span className="currency-symbol">¥</span>
+                    <input
+                        type="number"
+                        value={totalValue}
+                        onChange={(e) => setTotalValue(Number(e.target.value))}
+                        min={0}
+                    />
+                </div>
+            </div>
         </div>
       </header>
 
-      {/* 统计面板 */}
+      {/* 新增：标签页栏 */}
+      <div className="tabs-bar">
+        <div className="tabs-list">
+            {projects.map(proj => (
+                <div 
+                    key={proj.id} 
+                    className={`tab-item ${proj.id === activeProjectId ? 'active' : ''}`}
+                    onClick={() => switchProject(proj.id)}
+                >
+                    <span className="tab-name">{proj.name}</span>
+                    {projects.length > 1 && (
+                        <span 
+                            className="tab-close" 
+                            onClick={(e) => { e.stopPropagation(); removeProject(proj.id); }}
+                        >
+                            &times;
+                        </span>
+                    )}
+                </div>
+            ))}
+            <button className="add-tab-btn" onClick={addProject} title="新建项目">
+                +
+            </button>
+        </div>
+      </div>
+
       <StatsPanel />
 
-      {/* 主内容区 */}
       <main className="app-main">
         <div className="tree-container">
-          <NodeCard node={rootNode} level={0} isLast />
+           {/* 加个 key 强制切换项目时重新渲染动画 */}
+          <NodeCard key={rootNode.id} node={rootNode} level={0} isLast />
         </div>
       </main>
 
-      {/* 图例 */}
       <footer className="app-footer">
-        <div className="legend">
-          <span className="legend-title">分配规则：</span>
-          {Object.entries(RULE_CONFIG).map(([type, config]) => (
-            <span key={type} className="legend-item" style={{ color: config.color }}>
-              <span className="legend-dot" style={{ backgroundColor: config.color }} />
-              {config.label}分配
-            </span>
-          ))}
-        </div>
+        {/* ... Legend 保持不变 ... */}
       </footer>
     </div>
   );

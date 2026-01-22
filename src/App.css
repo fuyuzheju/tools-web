@@ -10,7 +10,7 @@
   --danger-light: #fef2f2;
   --purple: #8b5cf6;
   --purple-light: #f5f3ff;
-  
+
   --gray-50: #f8fafc;
   --gray-100: #f1f5f9;
   --gray-200: #e2e8f0;
@@ -21,25 +21,31 @@
   --gray-700: #334155;
   --gray-800: #1e293b;
   --gray-900: #0f172a;
-  
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-  
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 12px;
-  
+
   --transition: all 0.2s ease;
-  
+
   /* 树形结构变量 */
-  --tree-indent: 52px;          /* 每级缩进距离 */
-  --tree-line-offset: 16px;     /* 连接线距左边距离 */
-  --tree-line-color: #cbd5e1;   /* 连接线颜色 */
-  --node-card-height: 70px;     /* 节点卡片近似高度 */
-  --node-center: 51px;          /* 节点中心位置 */
-  --node-gap: 16px;             /* 节点间距 */
+  --tree-indent: 52px;
+  /* 每级缩进距离 */
+  --tree-line-offset: 16px;
+  /* 连接线距左边距离 */
+  --tree-line-color: #cbd5e1;
+  /* 连接线颜色 */
+  --node-card-height: 70px;
+  /* 节点卡片近似高度 */
+  --node-center: 51px;
+  /* 节点中心位置 */
+  --node-gap: 16px;
+  /* 节点间距 */
 }
 
 /* === 全局样式 === */
@@ -56,7 +62,7 @@ body {
 }
 
 #root {
-    min-width: 100%;
+  min-width: 100%;
 }
 
 .app {
@@ -205,7 +211,8 @@ body {
 .total-input-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: flex-end; /* 标签右对齐 */
+  align-items: flex-end;
+  /* 标签右对齐 */
 }
 
 /* === 统计面板 === */
@@ -214,7 +221,7 @@ body {
   justify-content: center;
   gap: 32px;
   padding: 16px;
-  background: rgba(255,255,255,0.7);
+  background: rgba(255, 255, 255, 0.7);
   border-bottom: 1px solid var(--gray-200);
 }
 
@@ -266,11 +273,12 @@ body {
 .app-main {
   flex: 1;
   padding: 32px;
-  overflow-x: auto; /* 允许横向滚动 */
+  overflow-x: auto;
+  /* 允许横向滚动 */
   min-width: 100%;
-  
+
   /* 添加以下两行，确保 flex 子元素布局更稳定 */
-  display: flex; 
+  display: flex;
   flex-direction: column;
   align-items: center;
 }
@@ -278,15 +286,18 @@ body {
 /* App.css 约 268行附近 */
 .tree-container {
   /* 确保移除 width: max-content */
-  
+
   /* 核心设置： */
-  display: inline-block;    /* 允许容器随内容撑大（解决滚动背景截断） */
+  display: inline-block;
+  /* 允许容器随内容撑大（解决滚动背景截断） */
   max-width: fit-content;
-  width: auto;              /* 恢复默认宽度行为，让它能自适应伸展 */
-  
+  width: auto;
+  /* 恢复默认宽度行为，让它能自适应伸展 */
+
   padding: 16px;
   vertical-align: top;
-  box-sizing: border-box;   /* 确保 padding 包含在宽度计算内 */
+  box-sizing: border-box;
+  /* 确保 padding 包含在宽度计算内 */
 }
 
 /* ============================================
@@ -370,9 +381,9 @@ body {
    ============================================ */
 
 .node-card {
-    min-width: 700px;
-    width: fit-content;
-    padding: calc(var(--node-gap)/2);
+  min-width: 700px;
+  width: fit-content;
+  padding: calc(var(--node-gap)/2);
 }
 
 .node-card-content {
@@ -489,7 +500,7 @@ body {
 }
 
 .root-card .name-input:focus {
-  border-bottom-color: rgba(255,255,255,0.5);
+  border-bottom-color: rgba(255, 255, 255, 0.5);
 }
 
 .rule-editor {
@@ -643,12 +654,12 @@ body {
   transition: var(--transition);
 }
 
-.action-btn svg{
-    width: 14px;
-    height: 14px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2px;
+.action-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2px;
 }
 
 .action-btn.add {
@@ -727,43 +738,263 @@ body {
   border-radius: 50%;
 }
 
+/* --- Tabs Bar --- */
+.tabs-bar {
+  background-color: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 20px;
+  padding-top: 10px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.tabs-list {
+  display: flex;
+  flex-direction: row;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #e2e8f0;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: #64748b;
+  transition: all 0.2s;
+  user-select: none;
+  max-width: 200px;
+}
+
+.tab-item:hover {
+  background: #cbd5e1;
+}
+
+.tab-item.active {
+  background: #fff;
+  color: #2563eb;
+  font-weight: 600;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.02);
+}
+
+.tab-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  margin-left: 8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tab-close:hover {
+  background-color: #ef4444;
+  color: white;
+}
+
+.add-tab-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  padding: 0 12px;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.add-tab-btn:hover {
+  color: #2563eb;
+}
+
+/* --- Summary Modal --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.summary-banner {
+  background: linear-gradient(to right, #eff6ff, #f5f3ff);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.summary-banner .value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #2563eb;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-table th {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 2px solid #e2e8f0;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.summary-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.font-bold {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.amount-cell {
+  text-align: left;
+  font-family: monospace;
+  font-size: 16px;
+  color: #059669;
+  font-weight: 600;
+}
+
+.source-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-tag {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.src-val {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.summary-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.summary-btn:hover {
+  background: #7c3aed;
+}
+
 /* === 响应式 === */
 @media (max-width: 768px) {
   :root {
     --tree-indent: 40px;
     --tree-line-offset: 12px;
   }
-  
+
   .app-header {
     flex-direction: column;
     gap: 16px;
     padding: 16px;
   }
-  
+
   .stats-panel {
     flex-wrap: wrap;
     gap: 12px;
     padding: 12px;
   }
-  
+
   .stat-item {
     padding: 6px 12px;
   }
-  
+
   .stat-value {
     font-size: 1.2rem;
   }
-  
+
   .app-main {
     padding: 16px;
   }
-  
+
   .node-card-content {
     flex-wrap: wrap;
     gap: 12px;
     padding: 12px 16px;
   }
-  
+
   .node-actions {
     opacity: 1;
     flex-direction: row;
@@ -771,19 +1002,19 @@ body {
     right: 8px;
     top: 8px;
   }
-  
+
   .node-result {
     min-width: 100%;
     text-align: left;
     padding-top: 8px;
     border-top: 1px solid var(--gray-100);
   }
-  
+
   .progress-bar {
     margin-left: 0;
     width: 100%;
   }
-  
+
   .legend {
     gap: 12px;
   }
@@ -795,6 +1026,7 @@ body {
     opacity: 0;
     transform: translateX(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);

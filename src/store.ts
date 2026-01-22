@@ -1,18 +1,26 @@
 import { create } from 'zustand';
-import { type AllocNode, RuleType, calculateTree, type CalculationMap } from './core';
+import { useMemo } from 'react';
+import { type AllocNode, RuleType, calculateTree } from './core';
 
-// 新增：定义保存文件的结构
+// --- 类型定义 ---
 export interface ProjectData {
+  id: string;
+  name: string;
   totalValue: number;
   rootNode: AllocNode;
-  version: string; // 最好加个版本号，方便未来兼容
 }
 
-interface AppState {
-  totalValue: number;
-  rootNode: AllocNode;
-  calculationResult: CalculationMap;
-  collapsedNodes: Set<string>;
+// 基础 State，只存核心数据和动作
+interface BaseState {
+  projects: ProjectData[];
+  activeProjectId: string;
+  collapsedNodes: Set<string>; // UI 状态可以共享，或者根据 ID 存
+
+  // Actions
+  addProject: () => void;
+  switchProject: (id: string) => void;
+  removeProject: (id: string) => void;
+  updateProjectName: (id: string, name: string) => void;
 
   setTotalValue: (val: number) => void;
   updateNodeRule: (id: string, rule: Partial<AllocNode['rule']>) => void;
@@ -20,16 +28,23 @@ interface AppState {
   deleteNode: (id: string) => void;
   updateNodeName: (id: string, name: string) => void;
   toggleCollapse: (id: string) => void;
-
-  // 新增：加载项目数据的方法
-  loadProject: (data: ProjectData) => void;
+  loadProject: (data: Omit<ProjectData, 'id' | 'name'>) => void;
 }
 
-// ... updateTree, removeFromTree, INITIAL_ROOT 保持不变 ...
-// (为了节省篇幅，这里省略重复代码，请保留原有的辅助函数和 INITIAL_ROOT)
+// --- 辅助函数 ---
+const createDefaultProject = (id: string, name: string): ProjectData => ({
+  id,
+  name,
+  totalValue: 1000000,
+  rootNode: {
+    id: `root-${id}`,
+    name: name,
+    rule: { type: RuleType.FIXED, value: 0 },
+    children: []
+  }
+});
 
 const updateTree = (root: AllocNode, targetId: string, updater: (node: AllocNode) => void): AllocNode => {
-  // ... 原有逻辑
   const newRoot = { ...root, children: [...root.children] };
   if (newRoot.id === targetId) {
     updater(newRoot);
@@ -39,9 +54,7 @@ const updateTree = (root: AllocNode, targetId: string, updater: (node: AllocNode
   return newRoot;
 };
 
-// 从树中删除节点
 const removeFromTree = (root: AllocNode, targetId: string): AllocNode => {
-  // ... 原有逻辑
   const newRoot = { ...root, children: [...root.children] };
   newRoot.children = newRoot.children
     .filter(child => child.id !== targetId)
@@ -49,120 +62,172 @@ const removeFromTree = (root: AllocNode, targetId: string): AllocNode => {
   return newRoot;
 };
 
-const INITIAL_ROOT: AllocNode = {
-  id: 'root',
-  name: '项目总产值',
-  rule: { type: RuleType.FIXED, value: 0 },
-  children: [
-    {
-      id: '1', name: '外包团队',
-      rule: { type: RuleType.PERCENTAGE, value: 30 },
-      children: [
-        { id: '1-1', name: '设计外包', rule: { type: RuleType.PERCENTAGE, value: 40 }, children: [] },
-        { id: '1-2', name: '开发外包', rule: { type: RuleType.REMAINDER, value: 0 }, children: [] },
-      ]
+// --- 创建基础 Store ---
+// 注意：这里不再包含 get rootNode() 等计算属性
+const useBaseStore = create<BaseState>((set) => {
+  const initialId = 'proj-1';
+
+  return {
+    projects: [createDefaultProject(initialId, '新项目')],
+    activeProjectId: initialId,
+    collapsedNodes: new Set(),
+
+    addProject: () => {
+      set(state => {
+        const newId = Math.random().toString(36);
+        return {
+          projects: [...state.projects, createDefaultProject(newId, `新项目`)],
+          activeProjectId: newId,
+          collapsedNodes: new Set()
+        };
+      });
     },
-    {
-      id: '2', name: '内部工程部',
-      rule: { type: RuleType.REMAINDER, value: 0 },
-      children: [
-        { id: '2-1', name: '前端组', rule: { type: RuleType.PERCENTAGE, value: 35 }, children: [] },
-        { id: '2-2', name: '后端组', rule: { type: RuleType.PERCENTAGE, value: 45 }, children: [] },
-        { id: '2-3', name: '测试组', rule: { type: RuleType.REMAINDER, value: 0 }, children: [] },
-      ]
+
+    switchProject: (id) => set({ activeProjectId: id, collapsedNodes: new Set() }),
+
+    removeProject: (id) => {
+      set(state => {
+        if (state.projects.length <= 1) return state;
+        const newProjects = state.projects.filter(p => p.id !== id);
+        const newActiveId = state.activeProjectId === id ? newProjects[0].id : state.activeProjectId;
+        return { projects: newProjects, activeProjectId: newActiveId };
+      });
+    },
+
+    updateProjectName: (id, name) => {
+      set(state => ({
+        projects: state.projects.map(p =>
+          p.id === id
+            ? { ...p, name: name, rootNode: { ...p.rootNode, name: name } }
+            : p
+        )
+      }));
+    },
+
+    setTotalValue: (val) => {
+      set(state => ({
+        projects: state.projects.map(p =>
+          p.id === state.activeProjectId ? { ...p, totalValue: val } : p
+        )
+      }));
+    },
+
+    updateNodeRule: (nodeId, rule) => {
+      set(state => {
+        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+        const newRoot = updateTree(activeProj.rootNode, nodeId, n => { n.rule = { ...n.rule, ...rule }; });
+        return {
+          projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p)
+        };
+      });
+    },
+
+    updateNodeName: (nodeId, name) => {
+      set(state => {
+        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+        const isRoot = nodeId === activeProj.rootNode.id;
+
+        if (isRoot) {
+          // avoid repeated names
+          const isDuplicate = state.projects.some(p =>
+            p.id !== activeProj.id && p.name === name
+          );
+
+          if (isDuplicate) {
+            alert(`项目名称 "${name}" 已存在，请使用其他名称。`);
+            return state; // 直接返回原状态，不进行更新
+          }
+        }
+
+        const newRoot = updateTree(activeProj.rootNode, nodeId, n => { n.name = name; });
+        let newName = activeProj.name;
+        if (isRoot) newName = name;
+        return {
+          projects: state.projects.map(p =>
+            p.id === state.activeProjectId ? { ...p, rootNode: newRoot, name: newName } : p
+          )
+        };
+      });
+    },
+
+    addNode: (parentId, name) => {
+      set(state => {
+        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+        const newId = Math.random().toString(36);
+        const newNode: AllocNode = {
+          id: newId,
+          name,
+          rule: { type: RuleType.PERCENTAGE, value: 10 },
+          children: []
+        };
+        const newRoot = updateTree(activeProj.rootNode, parentId, n => {
+          n.children = [...n.children, newNode];
+        });
+        const newCollapsed = new Set(state.collapsedNodes);
+        newCollapsed.delete(parentId);
+
+        return {
+          projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p),
+          collapsedNodes: newCollapsed
+        };
+      });
+    },
+
+    deleteNode: (id) => {
+      set(state => {
+        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+        const newRoot = removeFromTree(activeProj.rootNode, id);
+        return {
+          projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p)
+        };
+      });
+    },
+
+    toggleCollapse: (id) => {
+      set(state => {
+        const newSet = new Set(state.collapsedNodes);
+        if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
+        return { collapsedNodes: newSet };
+      });
+    },
+
+    loadProject: (data) => {
+      set(state => {
+        const newId = Math.random().toString(36);
+        const newProject = {
+          id: newId,
+          name: data.rootNode.name,
+          totalValue: data.totalValue,
+          rootNode: data.rootNode
+        };
+        return {
+          projects: [...state.projects, newProject],
+          collapsedNodes: new Set(),
+          activeProjectId: newId,
+        }
+      });
     }
-  ]
+  };
+});
+
+// --- 封装 Hook：在组件层动态计算当前数据 ---
+export const useStore = () => {
+  const state = useBaseStore();
+
+  // 1. 获取当前激活的项目
+  const activeProject = state.projects.find(p => p.id === state.activeProjectId) || state.projects[0];
+
+  // 2. 实时计算结果（使用 useMemo 避免每次渲染都重算，仅在项目数据变化时计算）
+  const calculationResult = useMemo(() => {
+    return calculateTree(activeProject.rootNode, activeProject.totalValue);
+  }, [activeProject.rootNode, activeProject.totalValue]);
+
+  // 3. 返回合并后的对象，兼容之前的接口
+  return {
+    ...state,
+    rootNode: activeProject.rootNode,
+    totalValue: activeProject.totalValue,
+    name: activeProject.name,
+    calculationResult // 动态计算出的结果
+  };
 };
-
-export const useStore = create<AppState>((set) => ({
-  totalValue: 1000000,
-  rootNode: INITIAL_ROOT,
-  calculationResult: calculateTree(INITIAL_ROOT, 1000000),
-  collapsedNodes: new Set<string>(),
-
-  // ... 原有的 setTotalValue, updateNodeRule, updateNodeName, addNode, deleteNode, toggleCollapse ...
-  setTotalValue: (val) => {
-    set(state => ({
-      totalValue: val,
-      calculationResult: calculateTree(state.rootNode, val)
-    }));
-  },
-
-  updateNodeRule: (id, newRule) => {
-    set(state => {
-      const newRoot = updateTree(state.rootNode, id, (node) => {
-        node.rule = { ...node.rule, ...newRule };
-      });
-      return {
-        rootNode: newRoot,
-        calculationResult: calculateTree(newRoot, state.totalValue)
-      };
-    });
-  },
-
-  updateNodeName: (id, name) => {
-    set(state => {
-      const newRoot = updateTree(state.rootNode, id, (node) => { node.name = name });
-      return { rootNode: newRoot };
-    });
-  },
-
-  addNode: (parentId, name) => {
-    set(state => {
-      const newId = Math.random().toString(36).substr(2, 9);
-      const newNode: AllocNode = {
-        id: newId,
-        name,
-        rule: { type: RuleType.PERCENTAGE, value: 10 },
-        children: []
-      };
-
-      const newRoot = updateTree(state.rootNode, parentId, (node) => {
-        node.children = [...node.children, newNode];
-      });
-
-      const newCollapsed = new Set(state.collapsedNodes);
-      newCollapsed.delete(parentId);
-
-      return {
-        rootNode: newRoot,
-        calculationResult: calculateTree(newRoot, state.totalValue),
-        collapsedNodes: newCollapsed
-      };
-    });
-  },
-
-  deleteNode: (id) => {
-    set(state => {
-      const newRoot = removeFromTree(state.rootNode, id);
-      return {
-        rootNode: newRoot,
-        calculationResult: calculateTree(newRoot, state.totalValue)
-      };
-    });
-  },
-
-  toggleCollapse: (id) => {
-    set(state => {
-      const newSet = new Set(state.collapsedNodes);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return { collapsedNodes: newSet };
-    });
-  },
-
-  // --- 新增 Action ---
-  loadProject: (data: ProjectData) => {
-    set({
-      totalValue: data.totalValue,
-      rootNode: data.rootNode,
-      // 重新计算结果
-      calculationResult: calculateTree(data.rootNode, data.totalValue),
-      // 加载新文件时，重置折叠状态
-      collapsedNodes: new Set<string>()
-    });
-  }
-}));
