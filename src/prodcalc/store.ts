@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { useMemo } from 'react';
 import { type AllocNode, RuleType, calculateTree } from './core';
 
-// --- 类型定义 ---
 export interface ProjectData {
   id: string;
   name: string;
@@ -10,13 +9,13 @@ export interface ProjectData {
   rootNode: AllocNode;
 }
 
-// 基础 State，只存核心数据和动作
+export type DropPosition = 'inside' | 'before' | 'after';
+
 interface BaseState {
   projects: ProjectData[];
   activeProjectId: string;
   collapsedNodes: Set<string>; // UI 状态可以共享，或者根据 ID 存
 
-  // Actions
   addProject: () => void;
   switchProject: (id: string) => void;
   removeProject: (id: string) => void;
@@ -26,12 +25,24 @@ interface BaseState {
   updateNodeRule: (id: string, rule: Partial<AllocNode['rule']>) => void;
   addNode: (parentId: string, name: string) => void;
   deleteNode: (id: string) => void;
+  moveNode: (sourceId: string, targetId: string, position: DropPosition) => void;
   updateNodeName: (id: string, name: string) => void;
   toggleCollapse: (id: string) => void;
   loadProject: (data: Omit<ProjectData, 'id' | 'name'>) => void;
 }
 
 // --- 辅助函数 ---
+const findParent = (root: AllocNode, targetId: string): AllocNode | null => {
+  if (root.children.some(c => c.id === targetId)) {
+    return root;
+  }
+  for (const child of root.children) {
+    const parent = findParent(child, targetId);
+    if (parent) return parent;
+  }
+  return null;
+};
+
 const createDefaultProject = (id: string, name: string): ProjectData => ({
   id,
   name,
@@ -43,6 +54,20 @@ const createDefaultProject = (id: string, name: string): ProjectData => ({
     children: []
   }
 });
+
+const findNode = (node: AllocNode, id: string): AllocNode | null => {
+  if (node.id === id) return node;
+  for (const child of node.children) {
+    const found = findNode(child, id);
+    if (found) return found;
+  }
+  return null;
+};
+
+const isDescendant = (sourceNode: AllocNode, targetId: string): boolean => {
+  if (sourceNode.id === targetId) return true;
+  return sourceNode.children.some(child => isDescendant(child, targetId));
+};
 
 const updateTree = (root: AllocNode, targetId: string, updater: (node: AllocNode) => void): AllocNode => {
   const newRoot = { ...root, children: [...root.children] };
@@ -62,8 +87,6 @@ const removeFromTree = (root: AllocNode, targetId: string): AllocNode => {
   return newRoot;
 };
 
-// --- 创建基础 Store ---
-// 注意：这里不再包含 get rootNode() 等计算属性
 const useBaseStore = create<BaseState>((set) => {
   const initialId = 'proj-1';
 
@@ -183,6 +206,55 @@ const useBaseStore = create<BaseState>((set) => {
       });
     },
 
+    moveNode: (sourceId, targetId, position) => {
+      set(state => {
+        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+        const root = activeProj.rootNode;
+
+        if (sourceId === root.id) return state;
+        if (sourceId === targetId) return state;
+
+        const sourceNode = findNode(root, sourceId);
+        if (!sourceNode) return state;
+
+        if (isDescendant(sourceNode, targetId)) {
+          return state;
+        }
+        let newRoot = removeFromTree(root, sourceId);
+
+        if (position === 'inside') {
+          newRoot = updateTree(newRoot, targetId, (node) => {
+            node.children = [...node.children, sourceNode];
+          });
+        } else {
+          if (targetId === root.id) {
+             newRoot = updateTree(newRoot, targetId, (node) => {
+                node.children.push(sourceNode);
+             });
+          } else {
+            const parent = findParent(newRoot, targetId);
+            if (parent) {
+               newRoot = updateTree(newRoot, parent.id, (parentNode) => {
+                  const targetIndex = parentNode.children.findIndex(c => c.id === targetId);
+                  if (targetIndex !== -1) {
+                    const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+                    const newChildren = [...parentNode.children];
+                    newChildren.splice(insertIndex, 0, sourceNode);
+                    parentNode.children = newChildren;
+                  }
+               });
+            }
+          }
+        }
+
+        return {
+          projects: state.projects.map(p => 
+            p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p
+          )
+        };
+      });
+    },
+
     toggleCollapse: (id) => {
       set(state => {
         const newSet = new Set(state.collapsedNodes);
@@ -210,24 +282,21 @@ const useBaseStore = create<BaseState>((set) => {
   };
 });
 
-// --- 封装 Hook：在组件层动态计算当前数据 ---
+// 封装useBaseStore hook
 export const useStore = () => {
   const state = useBaseStore();
 
-  // 1. 获取当前激活的项目
   const activeProject = state.projects.find(p => p.id === state.activeProjectId) || state.projects[0];
 
-  // 2. 实时计算结果（使用 useMemo 避免每次渲染都重算，仅在项目数据变化时计算）
   const calculationResult = useMemo(() => {
     return calculateTree(activeProject.rootNode, activeProject.totalValue);
   }, [activeProject.rootNode, activeProject.totalValue]);
 
-  // 3. 返回合并后的对象，兼容之前的接口
   return {
     ...state,
     rootNode: activeProject.rootNode,
     totalValue: activeProject.totalValue,
     name: activeProject.name,
-    calculationResult // 动态计算出的结果
+    calculationResult
   };
 };

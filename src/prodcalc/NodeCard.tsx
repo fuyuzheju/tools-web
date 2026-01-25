@@ -1,6 +1,7 @@
 import { RuleType, type AllocNode } from './core';
-import { useStore } from './store';
+import { useStore, type DropPosition } from './store';
 import RULE_CONFIG from './config';
+import { useState } from 'react';
 
 // --- 工具函数 ---
 const formatMoney = (val: number) =>
@@ -37,9 +38,13 @@ const NodeCard: React.FC<{
     addNode,
     updateNodeName,
     deleteNode,
+    moveNode,
     collapsedNodes,
     toggleCollapse
   } = useStore();
+
+  const [dragPosition, setDragPosition] = useState<DropPosition | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const result = calculationResult[node.id] || { amount: 0, percentOfParent: 0, isError: false };
   const isRoot = level === 0;
@@ -47,17 +52,97 @@ const NodeCard: React.FC<{
   const isCollapsed = collapsedNodes.has(node.id);
   const ruleConfig = RULE_CONFIG[node.rule.type];
 
-  return (
-    <div className={`tree-node ${isRoot ? 'is-root' : ''} ${isLast ? 'is-last' : ''}`}>
+  const handleDragStart = (e: React.DragEvent) => {
+    if (isRoot) { e.preventDefault(); return; }
+    e.stopPropagation();
+    
+    // 标记 ID
+    e.dataTransfer.setData('node-id', node.id);
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // 延迟设置样式，避免拖拽时的 ghost image 也变成半透明
+    setTimeout(() => setIsDragging(true), 0);
+  };
 
-      {/* 连接线 - 只有非根节点才显示 */}
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDragPosition(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 1. 如果拖拽的是根节点（虽然我们在 start 阻止了，但为了安全）或自己
+    // 需要在 drop 时判断，这里仅做视觉处理
+
+    // 2. 计算鼠标在元素内的位置
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top; // 鼠标距离元素顶部的距离
+    const height = rect.height;
+
+    // 3. 判定区域阈值 (例如：上下 25% 区域为插入，中间 50% 为变为子节点)
+    const threshold = 0.25; 
+    
+    let position: DropPosition = 'inside';
+    
+    // 根节点只能接受 inside (无法在其前后插入兄弟)
+    if (isRoot) {
+        position = 'inside';
+    } else {
+        if (y < height * threshold) {
+            position = 'before';
+        } else if (y > height * (1 - threshold)) {
+            position = 'after';
+        }
+    }
+
+    // 优化：只有状态改变时才 set，减少渲染
+    if (dragPosition !== position) {
+        setDragPosition(position);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragPosition(null);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const sourceId = e.dataTransfer.getData('node-id');
+    const position = dragPosition;
+
+    // 清理状态
+    setDragPosition(null);
+
+    // 校验
+    if (!sourceId || !position) return;
+    if (sourceId === node.id) return;
+
+    // 执行移动
+    moveNode(sourceId, node.id, position);
+  };
+
+  // 生成 class
+  let dragClass = '';
+  if (dragPosition === 'inside') dragClass = 'drag-inside';
+  if (dragPosition === 'before') dragClass = 'drag-top';
+  if (dragPosition === 'after')  dragClass = 'drag-bottom';
+
+  return (
+    <div className={`tree-node
+                    ${isRoot ? 'is-root' : ''}
+                    ${isLast ? 'is-last' : ''}
+                    ${isDragging ? 'dragging' : ''}`}>
+
       {!isRoot && (
         <div className="connector">
-          {/* 垂直线上半部分：从上方到节点中心 */}
           <div className="connector-v-top" />
-          {/* 垂直线下半部分：从节点中心到底部，只在非最后节点显示 */}
           {!isLast && <div className="connector-v-bottom" />}
-          {/* 水平线：从垂直线到节点卡片 */}
           <div className="connector-h" />
         </div>
       )}
@@ -66,7 +151,17 @@ const NodeCard: React.FC<{
       <div className="node-content">
         {/* 节点主卡片 */}
         <div className="node-card">
-          <div className={`node-card-content ${result.isError ? 'has-error' : ''} ${isRoot ? 'root-card' : ''}`}>
+          <div className={`node-card-content 
+                          ${result.isError ? 'has-error' : ''} 
+                          ${isRoot ? 'root-card' : ''} 
+                          ${dragClass}`}
+              draggable={!isRoot}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
 
             {/* 折叠按钮 */}
             {hasChildren && (

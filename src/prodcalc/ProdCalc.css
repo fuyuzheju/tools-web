@@ -48,7 +48,6 @@
   /* 节点间距 */
 }
 
-/* === 全局样式 === */
 * {
   box-sizing: border-box;
 }
@@ -72,7 +71,6 @@ body {
   min-width: 100%;
 }
 
-/* === 头部 === */
 .app-header {
   background: white;
   padding: 16px 32px;
@@ -164,13 +162,11 @@ body {
   gap: 16px;
 }
 
-/* 操作按钮组 */
 .action-group {
   display: flex;
   gap: 12px;
 }
 
-/* 按钮样式 */
 .icon-btn {
   display: flex;
   align-items: center;
@@ -201,20 +197,16 @@ body {
   height: 16px;
 }
 
-/* 垂直分割线 */
 .divider-v {
   width: 1px;
   height: inherit;
   background-color: #e5e7eb;
 }
 
-/* 保持原有的 money-input-group 样式，可能需要微调对齐 */
 .total-input-wrapper {
   display: flex;
   flex-wrap: wrap;
-  /* flex-direction: row; */
   align-items: flex-end;
-  /* 标签右对齐 */
 }
 
 /* === 统计面板 === */
@@ -276,30 +268,21 @@ body {
   flex: 1;
   padding: 32px;
   overflow-x: auto;
-  /* 允许横向滚动 */
   min-width: 100%;
 
-  /* 添加以下两行，确保 flex 子元素布局更稳定 */
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* App.css 约 268行附近 */
 .tree-container {
-  /* 确保移除 width: max-content */
-
-  /* 核心设置： */
   display: inline-block;
-  /* 允许容器随内容撑大（解决滚动背景截断） */
   max-width: fit-content;
   width: auto;
-  /* 恢复默认宽度行为，让它能自适应伸展 */
 
   padding: 16px;
   vertical-align: top;
   box-sizing: border-box;
-  /* 确保 padding 包含在宽度计算内 */
 }
 
 /* ============================================
@@ -311,12 +294,10 @@ body {
   position: relative;
 }
 
-/* 根节点无缩进 */
 .tree-node.is-root {
   padding-left: 0;
 }
 
-/* 非根节点需要左侧空间放连接线 */
 .tree-node:not(.is-root) {
   padding-left: var(--tree-indent);
 }
@@ -334,7 +315,6 @@ body {
   pointer-events: none;
 }
 
-/* 垂直线上半部分：从顶部到节点中心 */
 .connector-v-top {
   position: absolute;
   left: var(--tree-line-offset);
@@ -344,7 +324,6 @@ body {
   background: var(--tree-line-color);
 }
 
-/* 垂直线下半部分：从节点中心到底部（连接下一个兄弟节点） */
 .connector-v-bottom {
   position: absolute;
   left: var(--tree-line-offset);
@@ -354,7 +333,6 @@ body {
   background: var(--tree-line-color);
 }
 
-/* 水平线：从垂直线连接到节点卡片 */
 .connector-h {
   position: absolute;
   left: var(--tree-line-offset);
@@ -364,13 +342,11 @@ body {
   background: var(--tree-line-color);
 }
 
-/* 节点内容区域 */
 .node-content {
   flex: 1;
   min-width: 0;
 }
 
-/* 子节点容器 */
 .tree-children {
   margin-top: 0;
   display: flex;
@@ -417,14 +393,32 @@ body {
   background: var(--danger-light);
 }
 
-/* 折叠按钮 */
+.node-card-content.drag-inside {
+    background-color: #eff6ff;
+    border: 2px dashed #2563eb;
+}
+
+.node-card-content.drag-top {
+    border-top: 3px solid #2563eb;
+    margin-top: -3px;
+}
+
+.node-card-content.drag-bottom {
+    border-bottom: 3px solid #2563eb;
+    margin-bottom: -3px;
+}
+
+.tree-node.dragging {
+    opacity: 0.4;
+    filter: grayscale(100%);
+}
+
 .collapse-btn {
   position: absolute;
   transform: translateY(calc(var(--node-card-height) * -0.5));
   left: 0;
   width: 24px;
   height: 24px;
-  /* border-radius: 50%; */
   padding: 0;
   border: 2px solid var(--gray-300);
   background: white;
@@ -447,7 +441,6 @@ body {
   transition: transform 0.2s ease;
 }
 
-/* 规则标签 */
 .rule-badge {
   display: flex;
   align-items: center;
@@ -473,7 +466,6 @@ body {
   }
 }
 
-/* 节点信息区 */
 .node-info {
   flex: 1;
   min-width: 180px;
@@ -510,7 +502,6 @@ body {
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  /* flex-wrap: wrap; */
 }
 
 .rule-select {
@@ -564,7 +555,6 @@ body {
   margin-left: 2px;
 }
 
-/* 结果区域 */
 .node-result {
   text-align: right;
   min-width: 120px;
@@ -632,7 +622,6 @@ body {
   margin-top: 4px;
 }
 
-/* 操作按钮 */
 .node-actions {
   display: flex;
   flex-direction: column;
@@ -685,12 +674,11 @@ body {
   color: white;
 }
 
-/* 折叠提示 */
 .collapsed-hint {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
+  padding: 3px 8px;
   margin-top: 0;
   background: var(--gray-100);
   border: 2px dashed var(--gray-300);
@@ -707,7 +695,6 @@ body {
   border-color: var(--gray-400);
 }
 
-/* === 页脚/图例 === */
 .app-footer {
   padding: 16px 32px;
   background: white;
@@ -961,7 +948,6 @@ body {
   background: #7c3aed;
 }
 
-/* === 响应式 === */
 @media (max-width: 768px) {
   :root {
     --tree-indent: 24px;
@@ -1033,7 +1019,6 @@ body {
   }
 }
 
-/* === 动画 === */
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -1050,7 +1035,6 @@ body {
   animation: fadeSlideIn 0.3s ease;
 }
 
-/* 隐藏数字输入框的滚动按钮 */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   opacity: 0.3;
