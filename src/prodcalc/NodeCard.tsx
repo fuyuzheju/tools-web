@@ -139,7 +139,7 @@ const NodeCard: React.FC<{
                     ${isLast ? 'is-last' : ''}
                     ${isDragging ? 'dragging' : ''}`}>
 
-      {!isRoot && (
+      {!isRoot && (level !== 1) && (
         <div className="connector">
           <div className="connector-v-top" />
           {!isLast && <div className="connector-v-bottom" />}
@@ -148,7 +148,7 @@ const NodeCard: React.FC<{
       )}
 
       {/* 节点内容区域 */}
-      <div className="node-content">
+      <div className={`node-content ${isRoot ? 'is-root' : ''}`}>
         {/* 节点主卡片 */}
         <div className="node-card">
           <div className={`node-card-content 
@@ -182,14 +182,14 @@ const NodeCard: React.FC<{
             )}
 
             {/* 左侧：规则标签 */}
-            {!isRoot && (
+            {/* {!isRoot && (
               <div
                 className="rule-badge"
                 style={{ backgroundColor: ruleConfig.bg, color: ruleConfig.color }}
               >
                 <span className="rule-label">{ruleConfig.label}</span>
               </div>
-            )}
+            )} */}
 
             {/* 中间：信息区 */}
             <div className="node-info">
@@ -204,6 +204,7 @@ const NodeCard: React.FC<{
                 <div className="rule-editor">
                   <select
                     className="rule-select"
+                    style={{backgroundColor: ruleConfig.bg, color: ruleConfig.color}}
                     value={node.rule.type}
                     onChange={(e) => updateNodeRule(node.id, { type: e.target.value as RuleType })}
                   >
@@ -290,7 +291,7 @@ const NodeCard: React.FC<{
 
         {/* 子节点容器 */}
         {hasChildren && !isCollapsed && (
-          <div className="tree-children">
+          <div className={`tree-children ${isRoot ? "horizontal" : "vertical"}`}>
             {node.children.map((child, idx) => (
               <NodeCard
                 key={child.id}

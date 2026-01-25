@@ -267,22 +267,17 @@ body {
 .app-main {
   flex: 1;
   padding: 32px;
-  overflow-x: auto;
+  overflow-x: scroll;
+  overflow-y: scroll;
   min-width: 100%;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
 .tree-container {
-  display: inline-block;
-  max-width: fit-content;
-  width: auto;
-
   padding: 16px;
   vertical-align: top;
   box-sizing: border-box;
+  width: fit-content;
+  min-width: 100%;
 }
 
 /* ============================================
@@ -347,11 +342,25 @@ body {
   min-width: 0;
 }
 
-.tree-children {
-  margin-top: 0;
+.node-content.is-root {
   display: flex;
   flex-direction: column;
+  align-items: center;
+}
+
+.tree-children {
+  margin-top: 0;
   gap: 0;
+}
+
+.tree-children.horizontal {
+  display: flex;
+  flex-direction: row;
+}
+
+.tree-children.vertical {
+  display: flex;
+  flex-direction: column;
 }
 
 /* ============================================
@@ -359,8 +368,8 @@ body {
    ============================================ */
 
 .node-card {
-  min-width: 700px;
   width: fit-content;
+  max-width: max-content;
   padding: calc(var(--node-gap)/2);
 }
 
@@ -417,8 +426,8 @@ body {
   position: absolute;
   transform: translateY(calc(var(--node-card-height) * -0.5));
   left: 0;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: 2px solid var(--gray-300);
   background: white;
@@ -506,7 +515,7 @@ body {
 
 .rule-select {
   padding: 6px 10px;
-  border: 1px solid var(--gray-400);
+  border: 1px solid black;
   border-radius: var(--radius-sm);
   background: var(--gray-200);
   font-size: 0.85rem;
@@ -525,7 +534,7 @@ body {
   display: flex;
   align-items: center;
   background: var(--gray-200);
-  border: 1px solid var(--gray-400);
+  border: 1px solid black;
   border-radius: var(--radius-sm);
   padding: 0 8px;
   transition: var(--transition);
