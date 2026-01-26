@@ -56,11 +56,9 @@ const NodeCard: React.FC<{
     if (isRoot) { e.preventDefault(); return; }
     e.stopPropagation();
     
-    // 标记 ID
     e.dataTransfer.setData('node-id', node.id);
     e.dataTransfer.effectAllowed = 'move';
     
-    // 延迟设置样式，避免拖拽时的 ghost image 也变成半透明
     setTimeout(() => setIsDragging(true), 0);
   };
 
@@ -73,20 +71,14 @@ const NodeCard: React.FC<{
     e.preventDefault();
     e.stopPropagation();
 
-    // 1. 如果拖拽的是根节点（虽然我们在 start 阻止了，但为了安全）或自己
-    // 需要在 drop 时判断，这里仅做视觉处理
-
-    // 2. 计算鼠标在元素内的位置
     const rect = e.currentTarget.getBoundingClientRect();
     const y = e.clientY - rect.top; // 鼠标距离元素顶部的距离
     const height = rect.height;
 
-    // 3. 判定区域阈值 (例如：上下 25% 区域为插入，中间 50% 为变为子节点)
     const threshold = 0.25; 
     
     let position: DropPosition = 'inside';
     
-    // 根节点只能接受 inside (无法在其前后插入兄弟)
     if (isRoot) {
         position = 'inside';
     } else {
@@ -180,16 +172,6 @@ const NodeCard: React.FC<{
                 </svg>
               </button>
             )}
-
-            {/* 左侧：规则标签 */}
-            {/* {!isRoot && (
-              <div
-                className="rule-badge"
-                style={{ backgroundColor: ruleConfig.bg, color: ruleConfig.color }}
-              >
-                <span className="rule-label">{ruleConfig.label}</span>
-              </div>
-            )} */}
 
             {/* 中间：信息区 */}
             <div className="node-info">

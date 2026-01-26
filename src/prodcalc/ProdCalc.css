@@ -73,10 +73,12 @@ body {
 
 .app-header {
   background: white;
-  padding: 16px 32px;
+  height: 60px;
+  padding: 0 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 24px;
   box-shadow: var(--shadow);
   position: sticky;
   top: 0;
@@ -129,7 +131,7 @@ body {
   background: var(--gray-100);
   border: 2px solid transparent;
   border-radius: var(--radius);
-  padding: 0 12px;
+  padding: 0 4px;
   transition: var(--transition);
 }
 
@@ -147,7 +149,6 @@ body {
 
 .money-input-group input {
   width: 180px;
-  padding: 10px 8px;
   border: none;
   background: transparent;
   font-size: 1.25rem;
@@ -156,7 +157,7 @@ body {
   outline: none;
 }
 
-.header-right {
+.panel-right {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
@@ -203,17 +204,11 @@ body {
   background-color: #e5e7eb;
 }
 
-.total-input-wrapper {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-}
-
 /* === 统计面板 === */
 .stats-panel {
   display: flex;
   justify-content: center;
-  gap: 32px;
+  gap: 56px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.7);
   border-bottom: 1px solid var(--gray-200);
@@ -266,7 +261,6 @@ body {
 
 .app-main {
   flex: 1;
-  padding: 32px;
   overflow-x: scroll;
   overflow-y: scroll;
   min-width: 100%;
@@ -797,10 +791,11 @@ body {
 
 /* --- Tabs Bar --- */
 .tabs-bar {
-  background-color: #f1f5f9;
+  background-color: white;
   border-bottom: 1px solid #e2e8f0;
   padding: 0 20px;
   padding-top: 10px;
+  flex: 1;
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -820,7 +815,6 @@ body {
   cursor: pointer;
   font-size: 14px;
   color: #64748b;
-  transition: all 0.2s;
   user-select: none;
   max-width: 200px;
 }
@@ -830,8 +824,10 @@ body {
 }
 
 .tab-item.active {
-  background: #fff;
+  background: white;
   color: #2563eb;
+  border: 1px solid var(--gray-400);
+  border-bottom: none;
   font-weight: 600;
   box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.02);
 }
@@ -1001,12 +997,13 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 6px 12px;
   background: #8b5cf6;
   color: white;
   border: none;
-  padding: 8px 16px;
   border-radius: 6px;
   font-weight: 500;
+  font-size: large;
   cursor: pointer;
   transition: background 0.2s;
 }
