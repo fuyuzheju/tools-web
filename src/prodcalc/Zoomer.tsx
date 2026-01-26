@@ -1,9 +1,9 @@
-interface ZoomerProps {
+interface Props {
     scale: number;
     setScale: ((updater: (prev: number) => number) => void) & ((scale: number) => void);
 }
 
-function Zoomer({ scale, setScale }: ZoomerProps) {
+function Zoomer({ scale, setScale }: Props) {
     const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 2.0)); // 最大 200%
     const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.2)); // 最小 20%
     const handleZoomReset = () => setScale(1);

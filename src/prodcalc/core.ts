@@ -10,106 +10,98 @@ export const RuleType = {
 export type RuleType = typeof RuleType[keyof typeof RuleType];
 
 export interface NodeRule {
-  type: RuleType;
-  value: number; // 如果是 REMAINDER，此值通常忽略，或者作为权重
+    type: RuleType;
+    value: number;
 }
-// src/core.ts
-
-// ... RuleType 和 NodeRule 保持不变 ...
 
 export interface AllocNode {
-  id: string;
-  name: string;
-  rule: NodeRule;
-  children: AllocNode[];
+    id: string;
+    name: string;
+    rule: NodeRule;
+    children: AllocNode[];
 }
 
-// 修改 1: 扩充计算结果接口
 export type CalculationMap = Record<string, {
-  amount: number;          // 最终分到的钱
-  percentOfParent: number; // 占比
-  isError: boolean;        // 是否自身金额为负（接收到了负资产）
-  isWarning: boolean;
-  unallocated: number;     // 新增：该节点未分配给子节点的余额
+    amount: number;          // 最终分到的钱
+    percentOfParent: number; // 占比
+    isError: boolean;        // 是否自身金额为负（接收到了负资产）
+    isWarning: boolean;
+    unallocated: number;     // 新增：该节点未分配给子节点的余额
 }>;
 
 export const calculateTree = (
-  node: AllocNode,
-  inputAmount: number,
-  resultMap: CalculationMap = {}
+    node: AllocNode,
+    inputAmount: number,
+    resultMap: CalculationMap = {}
 ): CalculationMap => {
-  
-  // 初始化当前节点结果
-  // 注意：初始 unallocated 设为 0，会在函数末尾更新
-  resultMap[node.id] = {
-    amount: inputAmount,
-    percentOfParent: 0, 
-    isError: inputAmount < -0.01, // 初始化判断，函数末尾计算完unallocated后仍然会判断
-    isWarning: false, // 初始化，在函数末尾更新
-    unallocated: inputAmount, 
-  };
 
-  if (!node.children || node.children.length === 0) {
-    return resultMap;
-  }
+    // 初始化当前节点结果
+    // 注意：初始 unallocated 设为 0，会在函数末尾更新
+    resultMap[node.id] = {
+        amount: inputAmount,
+        percentOfParent: 0,
+        isError: inputAmount < -0.01, // 初始化判断，函数末尾计算完unallocated后仍然会判断
+        isWarning: false, // 初始化，在函数末尾更新
+        unallocated: inputAmount,
+    };
 
-  const fixedNodes = node.children.filter(c => c.rule.type === RuleType.FIXED);
-  const percentNodes = node.children.filter(c => c.rule.type === RuleType.PERCENTAGE);
-  const remainderNodes = node.children.filter(c => c.rule.type === RuleType.REMAINDER);
+    if (!node.children || node.children.length === 0) {
+        return resultMap;
+    }
 
-  let remainingAmount = inputAmount;
+    const fixedNodes = node.children.filter(c => c.rule.type === RuleType.FIXED);
+    const percentNodes = node.children.filter(c => c.rule.type === RuleType.PERCENTAGE);
+    const remainderNodes = node.children.filter(c => c.rule.type === RuleType.REMAINDER);
 
-  // 1. 扣除固定金额
-  fixedNodes.forEach(child => {
-    const allocated = child.rule.value;
-    remainingAmount -= allocated;
-    calculateTree(child, allocated, resultMap);
-    resultMap[child.id].percentOfParent = inputAmount === 0 ? 0 : (allocated / inputAmount);
-  });
+    let remainingAmount = inputAmount;
 
-  // 2. 扣除百分比
-  percentNodes.forEach(child => {
-    const allocated = inputAmount * (child.rule.value / 100);
-    remainingAmount -= allocated;
-    calculateTree(child, allocated, resultMap);
-    resultMap[child.id].percentOfParent = child.rule.value / 100;
-  });
-
-  // 3. 分配剩余部分 & 计算未分配余额
-  if (remainderNodes.length > 0) {
-    // 如果有"吸纳剩余"的节点，它们会把剩余的钱（无论是正还是负）都拿走
-    // 所以此时父节点的 unallocated 必定为 0
-    const amountPerNode = remainingAmount / remainderNodes.length;
-    remainderNodes.forEach(child => {
-      calculateTree(child, amountPerNode, resultMap);
-      resultMap[child.id].percentOfParent = inputAmount === 0 ? 0 : (amountPerNode / inputAmount);
+    // 1. 扣除固定金额
+    fixedNodes.forEach(child => {
+        const allocated = child.rule.value;
+        remainingAmount -= allocated;
+        calculateTree(child, allocated, resultMap);
+        resultMap[child.id].percentOfParent = inputAmount === 0 ? 0 : (allocated / inputAmount);
     });
-    resultMap[node.id].unallocated = 0;
-  } else {
-    // 修改 2: 如果没有"吸纳剩余"节点，剩余的钱（正数或负数）就留在了父节点手里
-    // 只有当 remainingAmount > 0 时我们视作"未分配"（Warning）
-    // 如果 remainingAmount < 0，其实也是 Error（超额分配），但我们主要通过 isError 标记来追踪
-    resultMap[node.id].unallocated = remainingAmount;
-  }
 
-  // 判断isError
-  resultMap[node.id].isError = inputAmount < -0.01 || resultMap[node.id].unallocated < -0.01;
-  resultMap[node.id].isWarning = (!resultMap[node.id].isError) &&
-                                 (resultMap[node.id].unallocated > 0.01) &&
-                                 (node.children.length > 0);
+    // 2. 扣除百分比
+    percentNodes.forEach(child => {
+        const allocated = inputAmount * (child.rule.value / 100);
+        remainingAmount -= allocated;
+        calculateTree(child, allocated, resultMap);
+        resultMap[child.id].percentOfParent = child.rule.value / 100;
+    });
 
-  return resultMap;
+    // 3. 分配剩余部分 & 计算未分配余额
+    if (remainderNodes.length > 0) {
+        // 如果有"吸纳剩余"的节点，它们会把剩余的钱（无论是正还是负）都拿走
+        // 所以此时父节点的 unallocated 必定为 0
+        const amountPerNode = remainingAmount / remainderNodes.length;
+        remainderNodes.forEach(child => {
+            calculateTree(child, amountPerNode, resultMap);
+            resultMap[child.id].percentOfParent = inputAmount === 0 ? 0 : (amountPerNode / inputAmount);
+        });
+        resultMap[node.id].unallocated = 0;
+    } else {
+        // 修改 2: 如果没有"吸纳剩余"节点，剩余的钱（正数或负数）就留在了父节点手里
+        // 只有当 remainingAmount > 0 时我们视作"未分配"（Warning）
+        // 如果 remainingAmount < 0，其实也是 Error（超额分配），但我们主要通过 isError 标记来追踪
+        resultMap[node.id].unallocated = remainingAmount;
+    }
+
+    // 判断isError
+    resultMap[node.id].isError = inputAmount < -0.01 || resultMap[node.id].unallocated < -0.01;
+    resultMap[node.id].isWarning = (!resultMap[node.id].isError) &&
+        (resultMap[node.id].unallocated > 0.01) &&
+        (node.children.length > 0);
+
+    return resultMap;
 };
 
-// src/core.ts
-
-// ... (保留原有的 RuleType, AllocNode, CalculationMap, calculateTree 代码) ...
-
-// --- 新增：跨项目汇总逻辑 ---
+// --- 跨项目汇总逻辑 ---
 export interface PersonStat {
-  name: string;
-  totalAmount: number;
-  sources: { projectName: string; amount: number }[];
+    name: string;
+    totalAmount: number;
+    sources: { projectName: string; amount: number }[];
 }
 
 /**
@@ -118,46 +110,46 @@ export interface PersonStat {
  * @param calculateFn 计算函数引用
  */
 export const aggregateGlobalStats = (
-  projects: { name: string; rootNode: AllocNode; totalValue: number }[],
-  calculateFn: typeof calculateTree
+    projects: { name: string; rootNode: AllocNode; totalValue: number }[],
+    calculateFn: typeof calculateTree
 ): PersonStat[] => {
-  const map = new Map<string, PersonStat>();
+    const map = new Map<string, PersonStat>();
 
-  projects.forEach((proj) => {
-    // 1. 为每个项目计算结果
-    const results = calculateFn(proj.rootNode, proj.totalValue);
+    projects.forEach((proj) => {
+        // 1. 为每个项目计算结果
+        const results = calculateFn(proj.rootNode, proj.totalValue);
 
-    // 2. 遍历该项目所有节点，找到末端节点（叶子节点）
-    const traverse = (node: AllocNode) => {
-      const isLeaf = !node.children || node.children.length === 0;
-      
-      if (isLeaf) {
-        // 如果是末端节点，归集数据
-        const nodeResult = results[node.id];
-        if (!nodeResult) return;
+        // 2. 遍历该项目所有节点，找到末端节点（叶子节点）
+        const traverse = (node: AllocNode) => {
+            const isLeaf = !node.children || node.children.length === 0;
 
-        const current = map.get(node.name) || {
-          name: node.name,
-          totalAmount: 0,
-          sources: []
+            if (isLeaf) {
+                // 如果是末端节点，归集数据
+                const nodeResult = results[node.id];
+                if (!nodeResult) return;
+
+                const current = map.get(node.name) || {
+                    name: node.name,
+                    totalAmount: 0,
+                    sources: []
+                };
+
+                current.totalAmount += nodeResult.amount;
+                current.sources.push({
+                    projectName: proj.name, // 使用项目名称（即根节点名称）
+                    amount: nodeResult.amount
+                });
+
+                map.set(node.name, current);
+            } else {
+                // 继续递归
+                node.children.forEach(traverse);
+            }
         };
 
-        current.totalAmount += nodeResult.amount;
-        current.sources.push({
-          projectName: proj.name, // 使用项目名称（即根节点名称）
-          amount: nodeResult.amount
-        });
+        traverse(proj.rootNode);
+    });
 
-        map.set(node.name, current);
-      } else {
-        // 继续递归
-        node.children.forEach(traverse);
-      }
-    };
-
-    traverse(proj.rootNode);
-  });
-
-  // 转为数组并按金额倒序排列
-  return Array.from(map.values()).sort((a, b) => b.totalAmount - a.totalAmount);
+    // 转为数组并按金额倒序排列
+    return Array.from(map.values()).sort((a, b) => b.totalAmount - a.totalAmount);
 };

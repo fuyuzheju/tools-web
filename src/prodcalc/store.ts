@@ -2,301 +2,386 @@ import { create } from 'zustand';
 import { useMemo } from 'react';
 import { type AllocNode, RuleType, calculateTree } from './core';
 
+export interface PreAllocationRule {
+    type: "FIXED" | "PERCENTAGE";
+    value: number;
+}
+export interface PreAllocation {
+    id: string,
+    name: string,
+    rule: PreAllocationRule,
+}
+
 export interface ProjectData {
-  id: string;
-  name: string;
-  totalValue: number;
-  rootNode: AllocNode;
+    id: string;
+    name: string;
+    totalValue: number;
+    preAllocations: PreAllocation[];
+    rootNode: AllocNode;
 }
 
 export type DropPosition = 'inside' | 'before' | 'after';
 
 interface BaseState {
-  projects: ProjectData[];
-  activeProjectId: string;
-  collapsedNodes: Set<string>; // UI 状态可以共享，或者根据 ID 存
+    projects: ProjectData[];
+    activeProjectId: string;
+    collapsedNodes: Set<string>; // UI 状态可以共享，或者根据 ID 存
 
-  addProject: () => void;
-  switchProject: (id: string) => void;
-  removeProject: (id: string) => void;
-  updateProjectName: (id: string, name: string) => void;
+    addProject: () => void;
+    switchProject: (id: string) => void;
+    removeProject: (id: string) => void;
+    loadProject: (data: Omit<ProjectData, 'id' | 'name'>) => void;
+    updateProjectName: (id: string, name: string) => void;
 
-  setTotalValue: (val: number) => void;
-  updateNodeRule: (id: string, rule: Partial<AllocNode['rule']>) => void;
-  addNode: (parentId: string, name: string) => void;
-  deleteNode: (id: string) => void;
-  moveNode: (sourceId: string, targetId: string, position: DropPosition) => void;
-  updateNodeName: (id: string, name: string) => void;
-  toggleCollapse: (id: string) => void;
-  loadProject: (data: Omit<ProjectData, 'id' | 'name'>) => void;
+    setTotalValue: (val: number) => void;
+
+    addPreAllocation: () => void;
+    removePreAllocation: (id: string) => void;
+    updatePreAllocationName: (id: string, name: string) => void;
+    updatePreAllocationRule: (id: string, rule: Partial<PreAllocationRule>) => void;
+
+    addNode: (parentId: string, name: string) => void;
+    removeNode: (id: string) => void;
+    moveNode: (sourceId: string, targetId: string, position: DropPosition) => void;
+    updateNodeName: (id: string, name: string) => void;
+    updateNodeRule: (id: string, rule: Partial<AllocNode['rule']>) => void;
+
+    toggleCollapse: (id: string) => void;
 }
 
 // --- 辅助函数 ---
 const findParent = (root: AllocNode, targetId: string): AllocNode | null => {
-  if (root.children.some(c => c.id === targetId)) {
-    return root;
-  }
-  for (const child of root.children) {
-    const parent = findParent(child, targetId);
-    if (parent) return parent;
-  }
-  return null;
+    if (root.children.some(c => c.id === targetId)) {
+        return root;
+    }
+    for (const child of root.children) {
+        const parent = findParent(child, targetId);
+        if (parent) return parent;
+    }
+    return null;
 };
 
 const createDefaultProject = (id: string, name: string): ProjectData => ({
-  id,
-  name,
-  totalValue: 1000000,
-  rootNode: {
-    id: `root-${id}`,
-    name: name,
-    rule: { type: RuleType.FIXED, value: 0 },
-    children: []
-  }
+    id,
+    name,
+    totalValue: 1000000,
+    preAllocations: [],
+    rootNode: {
+        id: `root-${id}`,
+        name: name,
+        rule: { type: RuleType.FIXED, value: 0 },
+        children: []
+    }
 });
 
 const findNode = (node: AllocNode, id: string): AllocNode | null => {
-  if (node.id === id) return node;
-  for (const child of node.children) {
-    const found = findNode(child, id);
-    if (found) return found;
-  }
-  return null;
+    if (node.id === id) return node;
+    for (const child of node.children) {
+        const found = findNode(child, id);
+        if (found) return found;
+    }
+    return null;
 };
 
 const isDescendant = (sourceNode: AllocNode, targetId: string): boolean => {
-  if (sourceNode.id === targetId) return true;
-  return sourceNode.children.some(child => isDescendant(child, targetId));
+    if (sourceNode.id === targetId) return true;
+    return sourceNode.children.some(child => isDescendant(child, targetId));
 };
 
+const applyPreAllcation = (previousValue: number, preAllocation: PreAllocation): number => {
+    if (preAllocation.rule.type === "FIXED") {
+        return previousValue - preAllocation.rule.value;
+    } else if (preAllocation.rule.type === "PERCENTAGE") {
+        return previousValue * (1 - preAllocation.rule.value / 100);
+    } else {
+        throw Error;
+    }
+}
+
 const updateTree = (root: AllocNode, targetId: string, updater: (node: AllocNode) => void): AllocNode => {
-  const newRoot = { ...root, children: [...root.children] };
-  if (newRoot.id === targetId) {
-    updater(newRoot);
+    const newRoot = { ...root, children: [...root.children] };
+    if (newRoot.id === targetId) {
+        updater(newRoot);
+        return newRoot;
+    }
+    newRoot.children = newRoot.children.map(child => updateTree(child, targetId, updater));
     return newRoot;
-  }
-  newRoot.children = newRoot.children.map(child => updateTree(child, targetId, updater));
-  return newRoot;
 };
 
 const removeFromTree = (root: AllocNode, targetId: string): AllocNode => {
-  const newRoot = { ...root, children: [...root.children] };
-  newRoot.children = newRoot.children
-    .filter(child => child.id !== targetId)
-    .map(child => removeFromTree(child, targetId));
-  return newRoot;
+    const newRoot = { ...root, children: [...root.children] };
+    newRoot.children = newRoot.children
+        .filter(child => child.id !== targetId)
+        .map(child => removeFromTree(child, targetId));
+    return newRoot;
 };
 
 const useBaseStore = create<BaseState>((set) => {
-  const initialId = 'proj-1';
+    const initialId = 'proj-1';
 
-  return {
-    projects: [createDefaultProject(initialId, '新项目')],
-    activeProjectId: initialId,
-    collapsedNodes: new Set(),
+    return {
+        projects: [createDefaultProject(initialId, '新项目')],
+        activeProjectId: initialId,
+        collapsedNodes: new Set(),
 
-    addProject: () => {
-      set(state => {
-        const newId = Math.random().toString(36);
-        return {
-          projects: [...state.projects, createDefaultProject(newId, `新项目`)],
-          activeProjectId: newId,
-          collapsedNodes: new Set()
-        };
-      });
-    },
+        addProject: () => {
+            set(state => {
+                const newId = Math.random().toString(36);
+                return {
+                    projects: [...state.projects, createDefaultProject(newId, `新项目`)],
+                    activeProjectId: newId,
+                    collapsedNodes: new Set()
+                };
+            });
+        },
 
-    switchProject: (id) => set({ activeProjectId: id, collapsedNodes: new Set() }),
+        switchProject: (id) => set({ activeProjectId: id, collapsedNodes: new Set() }),
 
-    removeProject: (id) => {
-      set(state => {
-        if (state.projects.length <= 1) return state;
-        const newProjects = state.projects.filter(p => p.id !== id);
-        const newActiveId = state.activeProjectId === id ? newProjects[0].id : state.activeProjectId;
-        return { projects: newProjects, activeProjectId: newActiveId };
-      });
-    },
+        removeProject: (id) => {
+            set(state => {
+                if (state.projects.length <= 1) return state;
+                const newProjects = state.projects.filter(p => p.id !== id);
+                const newActiveId = state.activeProjectId === id ? newProjects[0].id : state.activeProjectId;
+                return { projects: newProjects, activeProjectId: newActiveId };
+            });
+        },
 
-    updateProjectName: (id, name) => {
-      set(state => ({
-        projects: state.projects.map(p =>
-          p.id === id
-            ? { ...p, name: name, rootNode: { ...p.rootNode, name: name } }
-            : p
-        )
-      }));
-    },
+        loadProject: (data) => {
+            set(state => {
+                const newId = Math.random().toString(36);
+                const newProject = {
+                    id: newId,
+                    name: data.rootNode.name,
+                    totalValue: data.totalValue,
+                    preAllocations: data.preAllocations,
+                    rootNode: data.rootNode
+                };
+                return {
+                    projects: [...state.projects, newProject],
+                    collapsedNodes: new Set(),
+                    activeProjectId: newId,
+                }
+            });
+        },
 
-    setTotalValue: (val) => {
-      set(state => ({
-        projects: state.projects.map(p =>
-          p.id === state.activeProjectId ? { ...p, totalValue: val } : p
-        )
-      }));
-    },
+        updateProjectName: (id, name) => {
+            set(state => ({
+                projects: state.projects.map(p =>
+                    p.id === id
+                        ? { ...p, name: name, rootNode: { ...p.rootNode, name: name } }
+                        : p
+                )
+            }));
+        },
 
-    updateNodeRule: (nodeId, rule) => {
-      set(state => {
-        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-        const newRoot = updateTree(activeProj.rootNode, nodeId, n => { n.rule = { ...n.rule, ...rule }; });
-        return {
-          projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p)
-        };
-      });
-    },
+        setTotalValue: (val) => {
+            set(state => ({
+                projects: state.projects.map(p =>
+                    p.id === state.activeProjectId ? { ...p, totalValue: val } : p
+                )
+            }));
+        },
 
-    updateNodeName: (nodeId, name) => {
-      set(state => {
-        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-        const isRoot = nodeId === activeProj.rootNode.id;
-
-        if (isRoot) {
-          // avoid repeated names
-          const isDuplicate = state.projects.some(p =>
-            p.id !== activeProj.id && p.name === name
-          );
-
-          if (isDuplicate) {
-            alert(`项目名称 "${name}" 已存在，请使用其他名称。`);
-            return state; // 直接返回原状态，不进行更新
-          }
-        }
-
-        const newRoot = updateTree(activeProj.rootNode, nodeId, n => { n.name = name; });
-        let newName = activeProj.name;
-        if (isRoot) newName = name;
-        return {
-          projects: state.projects.map(p =>
-            p.id === state.activeProjectId ? { ...p, rootNode: newRoot, name: newName } : p
-          )
-        };
-      });
-    },
-
-    addNode: (parentId, name) => {
-      set(state => {
-        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-        const newId = Math.random().toString(36);
-        const newNode: AllocNode = {
-          id: newId,
-          name,
-          rule: { type: RuleType.PERCENTAGE, value: 10 },
-          children: []
-        };
-        const newRoot = updateTree(activeProj.rootNode, parentId, n => {
-          n.children = [...n.children, newNode];
-        });
-        const newCollapsed = new Set(state.collapsedNodes);
-        newCollapsed.delete(parentId);
-
-        return {
-          projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p),
-          collapsedNodes: newCollapsed
-        };
-      });
-    },
-
-    deleteNode: (id) => {
-      set(state => {
-        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-        const newRoot = removeFromTree(activeProj.rootNode, id);
-        return {
-          projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p)
-        };
-      });
-    },
-
-    moveNode: (sourceId, targetId, position) => {
-      set(state => {
-        const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-        const root = activeProj.rootNode;
-
-        if (sourceId === root.id) return state;
-        if (sourceId === targetId) return state;
-
-        const sourceNode = findNode(root, sourceId);
-        if (!sourceNode) return state;
-
-        if (isDescendant(sourceNode, targetId)) {
-          return state;
-        }
-        let newRoot = removeFromTree(root, sourceId);
-
-        if (position === 'inside') {
-          newRoot = updateTree(newRoot, targetId, (node) => {
-            node.children = [...node.children, sourceNode];
-          });
-        } else {
-          if (targetId === root.id) {
-             newRoot = updateTree(newRoot, targetId, (node) => {
-                node.children.push(sourceNode);
-             });
-          } else {
-            const parent = findParent(newRoot, targetId);
-            if (parent) {
-               newRoot = updateTree(newRoot, parent.id, (parentNode) => {
-                  const targetIndex = parentNode.children.findIndex(c => c.id === targetId);
-                  if (targetIndex !== -1) {
-                    const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
-                    const newChildren = [...parentNode.children];
-                    newChildren.splice(insertIndex, 0, sourceNode);
-                    parentNode.children = newChildren;
-                  }
-               });
+        addPreAllocation: () => {
+            const newPreAllocation: PreAllocation = {
+                id: Math.random().toString(36),
+                name: '',
+                rule: { type: "PERCENTAGE", value: 10 },
             }
-          }
-        }
+            set(state => ({
+                projects: state.projects.map(p =>
+                    p.id === state.activeProjectId ? { ...p, preAllocations: [...p.preAllocations, newPreAllocation] } : p
+                )
+            }))
+        },
 
-        return {
-          projects: state.projects.map(p => 
-            p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p
-          )
-        };
-      });
-    },
+        removePreAllocation: (id) => {
+            set(state => ({
+                projects: state.projects.map(p =>
+                    p.id === state.activeProjectId ?
+                        { ...p, preAllocations: p.preAllocations.filter(pa => pa.id !== id) }
+                        : p
+                )
+            }))
+        },
 
-    toggleCollapse: (id) => {
-      set(state => {
-        const newSet = new Set(state.collapsedNodes);
-        if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
-        return { collapsedNodes: newSet };
-      });
-    },
+        updatePreAllocationName(id, name) {
+            set(state => ({
+                projects: state.projects.map(p =>
+                    p.id === state.activeProjectId ?
+                        {
+                            ...p, preAllocations: p.preAllocations.map(pa =>
+                                pa.id === id ? { ...pa, name: name } : pa
+                            )
+                        }
+                        : p
+                )
+            }))
+        },
 
-    loadProject: (data) => {
-      set(state => {
-        const newId = Math.random().toString(36);
-        const newProject = {
-          id: newId,
-          name: data.rootNode.name,
-          totalValue: data.totalValue,
-          rootNode: data.rootNode
-        };
-        return {
-          projects: [...state.projects, newProject],
-          collapsedNodes: new Set(),
-          activeProjectId: newId,
-        }
-      });
-    }
-  };
+        updatePreAllocationRule(id, rule) {
+            set(state => ({
+                projects: state.projects.map(p =>
+                    p.id === state.activeProjectId ?
+                        {
+                            ...p, preAllocations: p.preAllocations.map(pa =>
+                                pa.id === id ? { ...pa, rule: { ...pa.rule, ...rule } } : pa
+                            )
+                        }
+                        : p
+                )
+            }))
+        },
+
+        addNode: (parentId, name) => {
+            set(state => {
+                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+                const newId = Math.random().toString(36);
+                const newNode: AllocNode = {
+                    id: newId,
+                    name,
+                    rule: { type: RuleType.PERCENTAGE, value: 10 },
+                    children: []
+                };
+                const newRoot = updateTree(activeProj.rootNode, parentId, n => {
+                    n.children = [...n.children, newNode];
+                });
+                const newCollapsed = new Set(state.collapsedNodes);
+                newCollapsed.delete(parentId);
+
+                return {
+                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p),
+                    collapsedNodes: newCollapsed
+                };
+            });
+        },
+
+        removeNode: (id) => {
+            set(state => {
+                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+                const newRoot = removeFromTree(activeProj.rootNode, id);
+                return {
+                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p)
+                };
+            });
+        },
+
+        moveNode: (sourceId, targetId, position) => {
+            set(state => {
+                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+                const root = activeProj.rootNode;
+
+                if (sourceId === root.id) return state;
+                if (sourceId === targetId) return state;
+
+                const sourceNode = findNode(root, sourceId);
+                if (!sourceNode) return state;
+
+                if (isDescendant(sourceNode, targetId)) {
+                    return state;
+                }
+                let newRoot = removeFromTree(root, sourceId);
+
+                if (position === 'inside') {
+                    newRoot = updateTree(newRoot, targetId, (node) => {
+                        node.children = [...node.children, sourceNode];
+                    });
+                } else {
+                    if (targetId === root.id) {
+                        newRoot = updateTree(newRoot, targetId, (node) => {
+                            node.children.push(sourceNode);
+                        });
+                    } else {
+                        const parent = findParent(newRoot, targetId);
+                        if (parent) {
+                            newRoot = updateTree(newRoot, parent.id, (parentNode) => {
+                                const targetIndex = parentNode.children.findIndex(c => c.id === targetId);
+                                if (targetIndex !== -1) {
+                                    const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+                                    const newChildren = [...parentNode.children];
+                                    newChildren.splice(insertIndex, 0, sourceNode);
+                                    parentNode.children = newChildren;
+                                }
+                            });
+                        }
+                    }
+                }
+
+                return {
+                    projects: state.projects.map(p =>
+                        p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p
+                    )
+                };
+            });
+        },
+
+        updateNodeName: (nodeId, name) => {
+            set(state => {
+                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+                const isRoot = nodeId === activeProj.rootNode.id;
+
+                if (isRoot) {
+                    // avoid repeated names
+                    const isDuplicate = state.projects.some(p =>
+                        p.id !== activeProj.id && p.name === name
+                    );
+
+                    if (isDuplicate) {
+                        alert(`项目名称 "${name}" 已存在，请使用其他名称。`);
+                        return state; // 直接返回原状态，不进行更新
+                    }
+                }
+
+                const newRoot = updateTree(activeProj.rootNode, nodeId, n => { n.name = name; });
+                let newName = activeProj.name;
+                if (isRoot) newName = name;
+                return {
+                    projects: state.projects.map(p =>
+                        p.id === state.activeProjectId ? { ...p, rootNode: newRoot, name: newName } : p
+                    )
+                };
+            });
+        },
+
+        updateNodeRule: (nodeId, rule) => {
+            set(state => {
+                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+                const newRoot = updateTree(activeProj.rootNode, nodeId, n => { n.rule = { ...n.rule, ...rule }; });
+                return {
+                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p)
+                };
+            });
+        },
+
+        toggleCollapse: (id) => {
+            set(state => {
+                const newSet = new Set(state.collapsedNodes);
+                if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
+                return { collapsedNodes: newSet };
+            });
+        },
+
+    };
 });
 
 // 封装useBaseStore hook
 export const useStore = () => {
-  const state = useBaseStore();
+    const state = useBaseStore();
 
-  const activeProject = state.projects.find(p => p.id === state.activeProjectId) || state.projects[0];
+    const activeProject = state.projects.find(p => p.id === state.activeProjectId) || state.projects[0];
+    const restValue = activeProject.preAllocations.reduce(applyPreAllcation, activeProject.totalValue);
 
-  const calculationResult = useMemo(() => {
-    return calculateTree(activeProject.rootNode, activeProject.totalValue);
-  }, [activeProject.rootNode, activeProject.totalValue]);
+    const calculationResult = useMemo(() => {
+        return calculateTree(activeProject.rootNode, restValue);
+    }, [activeProject.rootNode, restValue]);
 
-  return {
-    ...state,
-    rootNode: activeProject.rootNode,
-    totalValue: activeProject.totalValue,
-    name: activeProject.name,
-    calculationResult
-  };
+    return {
+        ...state,
+        rootNode: activeProject.rootNode,
+        preAllocations: activeProject.preAllocations,
+        totalValue: activeProject.totalValue,
+        restValue: restValue,
+        name: activeProject.name,
+        calculationResult
+    };
 };
