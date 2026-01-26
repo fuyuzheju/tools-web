@@ -2,8 +2,13 @@ import { create } from 'zustand';
 import { useMemo } from 'react';
 import { type AllocNode, RuleType, calculateTree } from './core';
 
+export const PreAllocationRuleType = {
+    FIXED: "FIXED",
+    PERCENTAGE: "PERCENTAGE",
+} as const;
+export type PreAllocationRuleType = typeof PreAllocationRuleType[keyof typeof PreAllocationRuleType];
 export interface PreAllocationRule {
-    type: "FIXED" | "PERCENTAGE";
+    type: PreAllocationRuleType;
     value: number;
 }
 export interface PreAllocation {
@@ -88,11 +93,11 @@ const isDescendant = (sourceNode: AllocNode, targetId: string): boolean => {
     return sourceNode.children.some(child => isDescendant(child, targetId));
 };
 
-const applyPreAllcation = (previousValue: number, preAllocation: PreAllocation): number => {
+const applyPreAllcation = (totalValue: number, previousValue: number, preAllocation: PreAllocation): number => {
     if (preAllocation.rule.type === "FIXED") {
         return previousValue - preAllocation.rule.value;
     } else if (preAllocation.rule.type === "PERCENTAGE") {
-        return previousValue * (1 - preAllocation.rule.value / 100);
+        return previousValue - preAllocation.rule.value / 100 * totalValue;
     } else {
         throw Error;
     }
@@ -369,7 +374,10 @@ export const useStore = () => {
     const state = useBaseStore();
 
     const activeProject = state.projects.find(p => p.id === state.activeProjectId) || state.projects[0];
-    const restValue = activeProject.preAllocations.reduce(applyPreAllcation, activeProject.totalValue);
+    const restValue = activeProject.preAllocations.reduce(
+        (prev, curr) => applyPreAllcation(activeProject.totalValue, prev, curr),
+        activeProject.totalValue
+    );
 
     const calculationResult = useMemo(() => {
         return calculateTree(activeProject.rootNode, restValue);

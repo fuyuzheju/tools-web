@@ -1,7 +1,8 @@
 import { RuleType, type AllocNode } from './core';
 import { useStore, type DropPosition } from './store';
 import RULE_CONFIG from './config';
-import { useState } from 'react';
+import { PreAllocationRuleType } from './store';
+import { Fragment, useState } from 'react';
 
 // --- 进度条组件 ---
 const ProgressBar: React.FC<{ percent: number; color: string }> = ({ percent, color }) => {
@@ -171,10 +172,16 @@ const handleDrop = (
 const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
     const {
         calculationResult,
+        preAllocations,
+        totalValue,
         addNode,
         updateNodeName,
-        collapsedNodes,
         moveNode,
+        addPreAllocation,
+        removePreAllocation,
+        updatePreAllocationName,
+        updatePreAllocationRule,
+        collapsedNodes,
         toggleCollapse
     } = useStore();
 
@@ -198,27 +205,89 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                         onDrop={(e) => handleDrop(e, node, dragPosition, setDragPosition, moveNode)}
                     >
 
-                        {/* 折叠按钮 */}
-                        {hasChildren && <FoldButton toggleCollapse={() => toggleCollapse(node.id)} isCollapsed={isCollapsed} />}
+                        <div className="root-card-info">
+                            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                                <div className="total-value-info">
+                                    <input
+                                        className="preallocation-name-input"
+                                        value={node.name}
+                                        onChange={(e) => updateNodeName(node.id, e.target.value)}
+                                        placeholder="输入名称"
+                                    />
+                                    <div className="preallocation-value total-value">{formatMoney(totalValue)}</div>
+                                </div>
+                                {preAllocations.map(pa => {
+                                    let preAllocationValue, preAllocationPercentage;
+                                    switch (pa.rule.type) {
+                                        case 'FIXED':
+                                            preAllocationValue = pa.rule.value;
+                                            preAllocationPercentage = pa.rule.value / totalValue;
+                                            break;
 
-                        {/* 中间：信息区 */}
-                        <div className="node-info">
-                            <input
-                                className="name-input"
-                                value={node.name}
-                                onChange={(e) => updateNodeName(node.id, e.target.value)}
-                                placeholder="输入名称"
-                            />
-                        </div>
+                                        case 'PERCENTAGE':
+                                            preAllocationValue = totalValue * pa.rule.value / 100;
+                                            preAllocationPercentage = pa.rule.value / 100;
+                                    }
+                                    return <Fragment key={pa.id}>
+                                        <div className="minus-char">-</div>
 
-                        {/* 右侧：金额 */}
-                        <div className="node-result">
-                            <div className={`amount`}>
-                                {formatMoney(result.amount)}
+                                        <div className="preallocation-info">
+                                            <div style={{ display: 'flex' }}>
+                                                <button onClick={()=>removePreAllocation(pa.id)} className="remove-preallocation-button">
+                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path 
+                                                        d="M18 6L6 18M6 6l12 12" 
+                                                        stroke="black" 
+                                                        strokeWidth="2" 
+                                                        strokeLinecap="round" 
+                                                        strokeLinejoin="round"
+                                                    />
+                                                    </svg>
+                                                </button>
+                                                <input
+                                                    value={pa.name}
+                                                    onChange={(e)=>updatePreAllocationName(pa.id, e.target.value)}
+                                                    placeholder="输入名称"
+                                                    className="preallocation-name-input"
+                                                >
+                                                </input>
+                                                <div className="preallocation-value-input-group">
+                                                    <input
+                                                        type="number"
+                                                        value={pa.rule.value}
+                                                        onChange={(e)=>updatePreAllocationRule(pa.id, {value: Number(e.target.value)})}
+                                                        className="value-input">
+                                                    </input>
+                                                    <select
+                                                        value={pa.rule.type}
+                                                        onChange={(e)=>updatePreAllocationRule(pa.id, {type: e.target.value as PreAllocationRuleType})}
+                                                        className="preallocation-value-select"
+                                                    >
+                                                        <option value={PreAllocationRuleType.FIXED}>¥</option>
+                                                        <option value={PreAllocationRuleType.PERCENTAGE}>%</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div className="preallocation-value">
+                                                {formatMoney(preAllocationValue)}（{formatPercent(preAllocationPercentage)}）
+                                            </div>
+                                        </div>
+                                    </Fragment>
+                                }
+                                )}
+
+                                <button className="add-preallocation-button" onClick={addPreAllocation}>+</button>
                             </div>
-                        </div>
-                        <div className={`node-unallocated`}>
-                            剩余{formatMoney(result.unallocated)}
+                            <div className="rest-value">
+                                = {formatMoney(result.amount)}
+                                <span style={{
+                                    marginLeft: '24px',
+                                    height: '100%',
+                                    position: 'absolute',
+                                    color: 'white',
+                                    fontSize: '1rem',
+                                }}>剩余{formatMoney(result.unallocated)}</span>
+                            </div>
                         </div>
 
                         {/* 操作按钮 */}

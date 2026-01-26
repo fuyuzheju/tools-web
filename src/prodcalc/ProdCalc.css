@@ -424,7 +424,97 @@ body {
    节点卡片样式
    ============================================ */
 
+.total-value-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.preallocation-name-input {
+    width: 100px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    font-weight: 600;
+    color: inherit;
+    outline: none;
+}
+
+.preallocation-name-input:hover {
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.remove-preallocation-button {
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 16px;
+    width: 16px;
+    padding: 0;
+    background-color: var(--danger);
+}
+
+.preallocation-value-input-group {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    background: var(--gray-200);
+    border: 1px solid black;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.preallocation-value {
+    height: 30px;
+    font-weight: bold;
+    font-size: larger;
+    display: flex;
+    align-items: center;
+}
+
+.preallocation-value.total-value {
+    color: var(--primary);
+}
+
+.minus-char {
+    font-weight: 500;
+    font-size: 2rem;
+    transform: translateY(15px);
+}
+
+.preallocation-value-select {
+    border: none;
+    border-left: 1px solid var(--gray-400);
+    padding-left: 8px;
+}
+
+.add-preallocation-button {
+    height: 20px;
+    width: 20px;
+    border: none;
+    background-color: #72fbcd;
+    color: black;
+    border-radius: 20%;
+}
+
+.add-preallocation-button:hover {
+    background-color: #059669;
+    color: white;
+    transition: ease 0.15s;
+}
+
+.rest-value {
+    margin-top: 12px;
+    width: 100%;
+    text-align: center;
+    color: var(--primary);
+    font-weight: bolder;
+    font-size: 2rem;
+}
+
 .node-card {
+    min-width: 400px;
     width: fit-content;
     max-width: max-content;
     padding: calc(var(--node-gap)/2);
@@ -433,6 +523,7 @@ body {
 .node-card-content {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 16px;
     padding: 8px 20px;
     background: white;
@@ -550,6 +641,10 @@ body {
     transition: var(--transition);
 }
 
+.name-input::placeholder {
+    opacity: 0.5;
+}
+
 .root-card .name-input {
     color: white;
     font-size: 1.1rem;
@@ -603,7 +698,7 @@ body {
 }
 
 .value-input {
-    width: auto;
+    width: 80px;
     max-width: 80px;
     padding: 6px 4px;
     border: none;
