@@ -18,10 +18,11 @@ const TabsBar = ({ projects, activeProjectId, switchProject, removeProject, addP
     return (
         <div className="tabs-bar">
             <div className="tabs-list">
-                {projects.map(proj => (
+                {projects.map((proj, idx) => (
                     <div
                         key={proj.id}
                         className={`tab-item ${proj.id === activeProjectId ? 'active' : ''}`}
+                        style={{transform: `translateX(-${idx*4}px)`}}
                         onClick={() => switchProject(proj.id)}
                     >
                         <span className="tab-name">{proj.name}</span>
@@ -35,10 +36,10 @@ const TabsBar = ({ projects, activeProjectId, switchProject, removeProject, addP
                         )}
                     </div>
                 ))}
-                <button className="add-tab-btn" onClick={addProject} title="新建项目">
-                    +
-                </button>
             </div>
+            <button className="add-tab-btn" onClick={addProject} title="新建项目">
+                +
+            </button>
         </div>
     )
 }
@@ -81,7 +82,7 @@ export default function ProdCalc() {
             <StatsPanel />
 
             <main className="app-main">
-                <div className="tree-container" style={{ zoom: scale }}>
+                <div className="tree-container" style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }}>
                     {/* 加个 key 强制切换项目时重新渲染动画 */}
                     <RootNodeCard key={rootNode.id} node={rootNode} />
                 </div>

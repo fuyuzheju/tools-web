@@ -233,20 +233,20 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
 
                                         <div className="preallocation-info">
                                             <div style={{ display: 'flex' }}>
-                                                <button onClick={()=>removePreAllocation(pa.id)} className="remove-preallocation-button">
+                                                <button onClick={() => removePreAllocation(pa.id)} className="remove-preallocation-button">
                                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path 
-                                                        d="M18 6L6 18M6 6l12 12" 
-                                                        stroke="black" 
-                                                        strokeWidth="2" 
-                                                        strokeLinecap="round" 
-                                                        strokeLinejoin="round"
-                                                    />
+                                                        <path
+                                                            d="M18 6L6 18M6 6l12 12"
+                                                            stroke="black"
+                                                            strokeWidth="2"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        />
                                                     </svg>
                                                 </button>
                                                 <input
                                                     value={pa.name}
-                                                    onChange={(e)=>updatePreAllocationName(pa.id, e.target.value)}
+                                                    onChange={(e) => updatePreAllocationName(pa.id, e.target.value)}
                                                     placeholder="输入名称"
                                                     className="preallocation-name-input"
                                                 >
@@ -255,12 +255,12 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                                                     <input
                                                         type="number"
                                                         value={pa.rule.value}
-                                                        onChange={(e)=>updatePreAllocationRule(pa.id, {value: Number(e.target.value)})}
+                                                        onChange={(e) => updatePreAllocationRule(pa.id, { value: Number(e.target.value) })}
                                                         className="value-input">
                                                     </input>
                                                     <select
                                                         value={pa.rule.type}
-                                                        onChange={(e)=>updatePreAllocationRule(pa.id, {type: e.target.value as PreAllocationRuleType})}
+                                                        onChange={(e) => updatePreAllocationRule(pa.id, { type: e.target.value as PreAllocationRuleType })}
                                                         className="preallocation-value-select"
                                                     >
                                                         <option value={PreAllocationRuleType.FIXED}>¥</option>
@@ -300,12 +300,11 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                 {/* 子节点容器 */}
                 {hasChildren && !isCollapsed && (
                     <div className="tree-children horizontal">
-                        {node.children.map((child, idx) => (
+                        {node.children.map((child) => (
                             <NodeCard
                                 key={child.id}
                                 node={child}
                                 level={1}
-                                isLast={idx === node.children.length - 1}
                             />
                         ))}
                     </div>
@@ -329,8 +328,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
 const NodeCard: React.FC<{
     node: AllocNode;
     level: number;
-    isLast: boolean;
-}> = ({ node, level, isLast }) => {
+}> = ({ node, level }) => {
     const {
         calculationResult,
         updateNodeRule,
@@ -356,127 +354,126 @@ const NodeCard: React.FC<{
     if (dragPosition === 'before') dragClass = 'drag-top';
     if (dragPosition === 'after') dragClass = 'drag-bottom';
 
-    return (
-        <div className={`tree-node
-                    ${isLast ? 'is-last' : ''}
-                    ${isDragging ? 'dragging' : ''}`}>
-
-            {(level !== 1) && (
-                <div className="connector">
-                    <div className="connector-v-top" />
-                    {!isLast && <div className="connector-v-bottom" />}
-                    <div className="connector-h" />
-                </div>
-            )}
-
-            {/* 节点内容区域 */}
-            <div className={`node-content`}>
-                {/* 节点主卡片 */}
-                <div className="node-card">
-                    <div className={`node-card-content 
+    return (<>
+        {/* 节点内容区域 */}
+        <div className="node-content">
+            {/* 节点主卡片 */}
+            <div className={`node-card ${isDragging ? 'dragging' : ''}`}>
+                <div className={`node-card-content 
                           ${result.isError ? 'has-error' : ''} 
                           ${dragClass}`}
-                        draggable={true}
-                        onDragStart={(e) => handleDragStart(e, false, node, setIsDragging)}
-                        onDragEnd={() => handleDragEnd(setIsDragging, setDragPosition)}
-                        onDragOver={(e) => handleDragOver(e, false, dragPosition, setDragPosition)}
-                        onDragLeave={(e) => handleDragLeave(e, setDragPosition)}
-                        onDrop={(e) => handleDrop(e, node, dragPosition, setDragPosition, moveNode)}
-                    >
+                    draggable={true}
+                    onDragStart={(e) => handleDragStart(e, false, node, setIsDragging)}
+                    onDragEnd={() => handleDragEnd(setIsDragging, setDragPosition)}
+                    onDragOver={(e) => handleDragOver(e, false, dragPosition, setDragPosition)}
+                    onDragLeave={(e) => handleDragLeave(e, setDragPosition)}
+                    onDrop={(e) => handleDrop(e, node, dragPosition, setDragPosition, moveNode)}
+                >
 
-                        {/* 折叠按钮 */}
-                        {hasChildren && <FoldButton toggleCollapse={() => toggleCollapse(node.id)} isCollapsed={isCollapsed} />}
+                    {/* 折叠按钮 */}
+                    {hasChildren && <FoldButton toggleCollapse={() => toggleCollapse(node.id)} isCollapsed={isCollapsed} />}
 
-                        {/* 中间：信息区 */}
-                        <div className="node-info">
-                            <input
-                                className="name-input"
-                                value={node.name}
-                                onChange={(e) => updateNodeName(node.id, e.target.value)}
-                                placeholder="输入名称"
-                            />
+                    {/* 中间：信息区 */}
+                    <div className="node-info">
+                        <input
+                            className="name-input"
+                            value={node.name}
+                            onChange={(e) => updateNodeName(node.id, e.target.value)}
+                            placeholder="输入名称"
+                        />
 
-                            <div className="rule-editor">
-                                <select
-                                    className="rule-select"
-                                    style={{ backgroundColor: ruleConfig.bg, color: ruleConfig.color }}
-                                    value={node.rule.type}
-                                    onChange={(e) => updateNodeRule(node.id, { type: e.target.value as RuleType })}
-                                >
-                                    <option value={RuleType.PERCENTAGE}>比例分配</option>
-                                    <option value={RuleType.FIXED}>定额分配</option>
-                                    <option value={RuleType.REMAINDER}>吸纳剩余</option>
-                                </select>
+                        <div className="rule-editor">
+                            <select
+                                className="rule-select"
+                                style={{ backgroundColor: ruleConfig.bg, color: ruleConfig.color }}
+                                value={node.rule.type}
+                                onChange={(e) => updateNodeRule(node.id, { type: e.target.value as RuleType })}
+                            >
+                                <option value={RuleType.PERCENTAGE}>比例分配</option>
+                                <option value={RuleType.FIXED}>定额分配</option>
+                                <option value={RuleType.REMAINDER}>吸纳剩余</option>
+                            </select>
 
-                                {node.rule.type !== RuleType.REMAINDER && (
-                                    <div className="value-input-group">
-                                        <input
-                                            type="number"
-                                            className="value-input"
-                                            value={node.rule.value}
-                                            onChange={(e) => updateNodeRule(node.id, { value: Number(e.target.value) })}
-                                            min={0}
-                                        />
-                                        <span className="value-unit">
-                                            {node.rule.type === RuleType.PERCENTAGE ? '%' : '元'}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
+                            {node.rule.type !== RuleType.REMAINDER && (
+                                <div className="value-input-group">
+                                    <input
+                                        type="number"
+                                        className="value-input"
+                                        value={node.rule.value}
+                                        onChange={(e) => updateNodeRule(node.id, { value: Number(e.target.value) })}
+                                        min={0}
+                                    />
+                                    <span className="value-unit">
+                                        {node.rule.type === RuleType.PERCENTAGE ? '%' : '元'}
+                                    </span>
+                                </div>
+                            )}
                         </div>
+                    </div>
 
-                        {/* 右侧：金额和进度 */}
-                        <div className="node-result">
-                            <div className={`amount ${result.isError ? 'error' : ''}`}>
-                                {formatMoney(result.amount)}
-                            </div>
-                            <div className="percent-label">
-                                占比 {formatPercent(result.percentOfParent)}
-                            </div>
-                            <ProgressBar
-                                percent={result.percentOfParent}
-                                color={result.isError ? '#ef4444' : ruleConfig.color}
-                            />
+                    {/* 右侧：金额和进度 */}
+                    <div className="node-result">
+                        <div className={`amount ${result.isError ? 'error' : ''}`}>
+                            {formatMoney(result.amount)}
                         </div>
-                        {hasChildren &&
-                            <div className={`node-unallocated ${result.isError ? 'error' : ''} ${result.isWarning ? 'warning' : ''}`}>
-                                剩余{formatMoney(result.unallocated)}
-                            </div>
-                        }
+                        <div className="percent-label">
+                            占比 {formatPercent(result.percentOfParent)}
+                        </div>
+                        <ProgressBar
+                            percent={result.percentOfParent}
+                            color={result.isError ? '#ef4444' : ruleConfig.color}
+                        />
+                    </div>
+                    {hasChildren &&
+                        <div className={`node-unallocated ${result.isError ? 'error' : ''} ${result.isWarning ? 'warning' : ''}`}>
+                            剩余{formatMoney(result.unallocated)}
+                        </div>
+                    }
 
-                        {/* 操作按钮 */}
-                        <div className="node-actions">
-                            <AddActionButton addNode={(name) => addNode(node.id, name)} />
-                            <RemoveActionButton hasChildren={hasChildren} name={node.name} removeNode={() => removeNode(node.id)} />
-                        </div>
+                    {/* 操作按钮 */}
+                    <div className="node-actions">
+                        <AddActionButton addNode={(name) => addNode(node.id, name)} />
+                        <RemoveActionButton hasChildren={hasChildren} name={node.name} removeNode={() => removeNode(node.id)} />
                     </div>
                 </div>
+            </div >
 
-                {/* 子节点容器 */}
-                {hasChildren && !isCollapsed && (
+            {/* 子节点容器 */}
+            {
+                hasChildren && !isCollapsed && (
                     <div className={`tree-children vertical`}>
                         {node.children.map((child, idx) => (
-                            <NodeCard
+                            <div 
                                 key={child.id}
-                                node={child}
-                                level={level + 1}
-                                isLast={idx === node.children.length - 1}
-                            />
+                                className={`tree-node ${idx === node.children.length - 1 ? 'is-last' : ''}`}>
+                                <div className="connector">
+                                    <div className="connector-v-top" />
+                                    {!(idx===node.children.length - 1) && <div className="connector-v-bottom" />}
+                                    <div className="connector-h" />
+                                </div>
+                                <NodeCard
+                                    node={child}
+                                    level={level + 1}
+                                />
+                            </div>
                         ))}
                     </div>
-                )}
+                )
+            }
 
-                {/* 折叠提示 */}
-                {hasChildren && isCollapsed && (
+            {/* 折叠提示 */}
+            {
+                hasChildren && isCollapsed && (
                     <div className="collapsed-hint" onClick={() => toggleCollapse(node.id)}>
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <path d="M5 3l4 4-4 4" />
                         </svg>
                         <span>{node.children.length} 个子节点已折叠，点击展开</span>
                     </div>
-                )}
-            </div>
-        </div>
+                )
+            }
+        </div >
+    </>
     );
 };
 

@@ -35,7 +35,7 @@ interface BaseState {
     addProject: () => void;
     switchProject: (id: string) => void;
     removeProject: (id: string) => void;
-    loadProject: (data: Omit<ProjectData, 'id' | 'name'>) => void;
+    loadProject: (data: Omit<ProjectData, 'name'>) => void;
     updateProjectName: (id: string, name: string) => void;
 
     setTotalValue: (val: number) => void;
@@ -155,7 +155,7 @@ const useBaseStore = create<BaseState>((set) => {
             set(state => {
                 const newId = Math.random().toString(36);
                 const newProject = {
-                    id: newId,
+                    id: data.id,
                     name: data.rootNode.name,
                     totalValue: data.totalValue,
                     preAllocations: data.preAllocations,
