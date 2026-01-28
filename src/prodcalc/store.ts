@@ -17,13 +17,20 @@ export interface PreAllocation {
     rule: PreAllocationRule,
 }
 
+export interface PhaseData {
+    id: string;
+    name: string;
+    phaseValue: number;
+    preAllocations: PreAllocation[];
+    rootNode: AllocNode;
+    view: ProjectView; // UI相关内容
+}
+
 export interface ProjectData {
     id: string;
     name: string;
     totalValue: number;
-    preAllocations: PreAllocation[];
-    rootNode: AllocNode;
-    view: ProjectView; // UI相关内容
+    phases: PhaseData[];
 }
 
 export interface ProjectView {
@@ -36,16 +43,22 @@ export type NodeLayoutType = 'collapsed' | 'horizontal' | 'vertical';
 interface BaseState {
     projects: ProjectData[];
     activeProjectId: string;
+    activePhaseId: string;
     selectedNodeId: string | null;
     clipboard: AllocNode | null;
 
     addProject: () => void;
     switchProject: (id: string) => void;
     removeProject: (id: string) => void;
-    loadProject: (data: Omit<ProjectData, 'name'>) => void;
+    loadProject: (data: ProjectData) => void;
     updateProjectName: (id: string, name: string) => void;
+    setTotalValue: (id: string, val: number) => void;
 
-    setTotalValue: (val: number) => void;
+    addPhase: () => void;
+    switchPhase: (id: string) => void;
+    removePhase: (id: string) => void;
+    updatePhaseName: (id: string, name: string) => void;
+    setPhaseValue: (id: string, val: number) => void;
 
     addPreAllocation: () => void;
     removePreAllocation: (id: string) => void;
@@ -76,19 +89,31 @@ const findParent = (root: AllocNode, targetId: string): AllocNode | null => {
     return null;
 };
 
-const createDefaultProject = (id: string, layout: NodeLayoutType, name: string): ProjectData => ({
-    id,
-    name,
-    totalValue: 1000000,
-    preAllocations: [],
-    rootNode: {
-        id: `root-${id}`,
+const createDefaultProject = (id: string, layout: NodeLayoutType, name: string): ProjectData => {
+    return {
+        id: id,
         name: name,
-        rule: { type: RuleType.FIXED, value: 0 },
-        children: []
-    },
-    view: {nodeLayouts: {[`root-${id}`]: layout}}
-});
+        totalValue: 0,
+        phases: [createDefaultPhase(crypto.randomUUID(), layout, "入账")],
+    }
+};
+
+const createDefaultPhase = (id: string, layout: NodeLayoutType, name: string): PhaseData => {
+    const rootId = crypto.randomUUID();
+    return {
+        id: id,
+        name,
+        phaseValue: 0,
+        preAllocations: [],
+        rootNode: {
+            id: rootId,
+            name: '',
+            rule: { type: RuleType.FIXED, value: 0 },
+            children: []
+        },
+        view: {nodeLayouts: {[rootId]: layout}}
+    }
+}
 
 const findNode = (node: AllocNode, id: string): AllocNode | null => {
     if (node.id === id) return node;
@@ -109,6 +134,18 @@ const cloneNodeNewIds = (node: AllocNode): {node: AllocNode, ids: string[]} => {
             children: props.map(p => p.node),
         },
         ids: [...(props.map(p => p.ids).flat()), newId],
+    }
+}
+
+const clonePhaseNewIds = (phase: PhaseData): PhaseData => {
+    const {ids, node} = cloneNodeNewIds(phase.rootNode);
+    return {
+        ...phase,
+        id: crypto.randomUUID(),
+        rootNode: node,
+        view: {
+            nodeLayouts: ids.reduce((obj, key) => {obj[key] = 'vertical'; return obj;}, {} as Record<string, NodeLayoutType>)
+        }
     }
 }
 
@@ -147,31 +184,49 @@ const removeFromTree = (root: AllocNode, targetId: string): AllocNode => {
 
 const useBaseStore = create<BaseState>((set) => {
     const initialId = crypto.randomUUID();
+    const initialProject = createDefaultProject(initialId, 'horizontal', '新项目');
 
     return {
-        projects: [createDefaultProject(initialId, 'horizontal', '新项目')],
+        projects: [initialProject],
         activeProjectId: initialId,
+        activePhaseId: initialProject.phases[0].id,
         selectedNodeId: null,
         clipboard: null,
 
         addProject: () => {
             set(state => {
                 const newId = crypto.randomUUID();
+                const newProject = createDefaultProject(newId, 'horizontal', '新项目');
                 return {
-                    projects: [...state.projects, createDefaultProject(newId, 'horizontal', `新项目`)],
+                    projects: [...state.projects, newProject],
                     activeProjectId: newId,
+                    activePhaseId: newProject.phases[0].id,
                 };
             });
         },
 
-        switchProject: (id) => set({ activeProjectId: id }),
+        switchProject: (id) => {
+            set(state => {
+                const activeProject = state.projects.find(p => p.id === id)!;
+                return {
+                    activeProjectId: id,
+                    activePhaseId: activeProject.phases[0].id,
+                }
+            })
+        },
 
         removeProject: (id) => {
             set(state => {
                 if (state.projects.length <= 1) return state;
                 const newProjects = state.projects.filter(p => p.id !== id);
-                const newActiveId = state.activeProjectId === id ? newProjects[0].id : state.activeProjectId;
-                return { projects: newProjects, activeProjectId: newActiveId };
+                const newActiveProjectId = state.activeProjectId === id ? newProjects[0].id : state.activeProjectId;
+                const newActiveProject = state.projects.find(pj => pj.id === newActiveProjectId)!;
+                const newActivePhaseId = state.activeProjectId === id ? newActiveProject.phases[0].id : state.activePhaseId;
+                return {
+                    projects: newProjects,
+                    activeProjectId: newActiveProjectId,
+                    activePhaseId: newActivePhaseId,
+                };
             });
         },
 
@@ -180,19 +235,13 @@ const useBaseStore = create<BaseState>((set) => {
                 if (state.projects.find(p => p.id === data.id)) {
                     return {
                         activeProjectId: data.id,
+                        activePhaseId: data.phases[0].id,
                     }
                 }
-                const newProject: ProjectData = {
-                    id: data.id,
-                    name: data.rootNode.name,
-                    totalValue: data.totalValue,
-                    preAllocations: data.preAllocations,
-                    rootNode: data.rootNode,
-                    view: data.view,
-                };
                 return {
-                    projects: [...state.projects, newProject],
+                    projects: [...state.projects, data],
                     activeProjectId: data.id,
+                    activePhaseId: data.phases[0].id,
                 }
             });
         },
@@ -200,19 +249,72 @@ const useBaseStore = create<BaseState>((set) => {
         updateProjectName: (id, name) => {
             set(state => ({
                 projects: state.projects.map(p =>
-                    p.id === id
-                        ? { ...p, name: name, rootNode: { ...p.rootNode, name: name } }
-                        : p
+                    p.id !== id ? p :
+                    { ...p, name: name }
                 )
             }));
         },
 
-        setTotalValue: (val) => {
+        setTotalValue: (id, val) => {
             set(state => ({
                 projects: state.projects.map(p =>
-                    p.id === state.activeProjectId ? { ...p, totalValue: val } : p
+                    p.id === id ? { ...p, totalValue: val } : p
                 )
             }));
+        },
+
+        addPhase: () => {
+            set(state => {{
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+                const newPhase = clonePhaseNewIds(activePhase);
+                return {
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: [...pj.phases, newPhase]}
+                    ),
+                    activePhaseId: newPhase.id,
+                }
+            }})
+        },
+
+        removePhase: (id) => {
+            set(state => {{
+                const activeProject = state.projects.find(p => p.id === state.activeProjectId)!;
+                if (activeProject.phases.length <= 1) return state;
+                const newPhases = activeProject.phases.filter(ph => ph.id !== id);
+                return {
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: newPhases}
+                    ),
+                    activePhaseId: state.activePhaseId === id ? newPhases[0].id : state.activePhaseId,
+                }
+            }})
+        },
+
+        switchPhase: (id) => {set({activePhaseId: id})},
+
+        updatePhaseName: (id, name) => {
+            set(state => {
+                return {
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== id ? ph :
+                            {...ph, name: name}
+                        )}
+                    )
+                }
+            })
+        },
+
+        setPhaseValue: (id, val) => {
+            set(state => {
+                return {
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== id ? ph :
+                            {...ph, phaseValue: val}
+                        )}
+                    )
+                }
+            })
         },
 
         addPreAllocation: () => {
@@ -222,53 +324,52 @@ const useBaseStore = create<BaseState>((set) => {
                 rule: { type: "PERCENTAGE", value: 10 },
             }
             set(state => ({
-                projects: state.projects.map(p =>
-                    p.id === state.activeProjectId ? { ...p, preAllocations: [...p.preAllocations, newPreAllocation] } : p
+                projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                    {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                        {...ph, preAllocations: [...ph.preAllocations, newPreAllocation]}
+                    )}
                 )
             }))
         },
 
         removePreAllocation: (id) => {
             set(state => ({
-                projects: state.projects.map(p =>
-                    p.id === state.activeProjectId ?
-                        { ...p, preAllocations: p.preAllocations.filter(pa => pa.id !== id) }
-                        : p
+                projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                    {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                        {...ph, preAllocations: ph.preAllocations.filter(pa => pa.id !== id)}
+                    )}
                 )
             }))
         },
 
         updatePreAllocationName(id, name) {
             set(state => ({
-                projects: state.projects.map(p =>
-                    p.id === state.activeProjectId ?
-                        {
-                            ...p, preAllocations: p.preAllocations.map(pa =>
-                                pa.id === id ? { ...pa, name: name } : pa
-                            )
-                        }
-                        : p
+                projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                    {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                        {...ph, preAllocations: ph.preAllocations.map(pa => pa.id !== id ? pa :
+                            {...pa, name: name}
+                        )}
+                    )}
                 )
             }))
         },
 
         updatePreAllocationRule(id, rule) {
             set(state => ({
-                projects: state.projects.map(p =>
-                    p.id === state.activeProjectId ?
-                        {
-                            ...p, preAllocations: p.preAllocations.map(pa =>
-                                pa.id === id ? { ...pa, rule: { ...pa.rule, ...rule } } : pa
-                            )
-                        }
-                        : p
+                projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                    {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                        {...ph, preAllocations: ph.preAllocations.map(pa => pa.id !== id ? pa :
+                            {...pa, rule: {...pa.rule, ...rule}}
+                        )}
+                    )}
                 )
             }))
         },
 
         addNode: (parentId, name) => {
             set(state => {
-                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
                 const newId = crypto.randomUUID();
                 const newNode: AllocNode = {
                     id: newId,
@@ -276,37 +377,47 @@ const useBaseStore = create<BaseState>((set) => {
                     rule: { type: RuleType.PERCENTAGE, value: 10 },
                     children: []
                 };
-                const newRoot = updateTree(activeProj.rootNode, parentId, n => {
+                const newRoot = updateTree(activePhase.rootNode, parentId, n => {
                     n.children = [...n.children, newNode];
                 });
                 const newView: ProjectView = {
-                    nodeLayouts: {...activeProj.view.nodeLayouts, [newId]: 'vertical'},
+                    nodeLayouts: {...activePhase.view.nodeLayouts, [newId]: 'vertical'},
                 }
 
                 return {
-                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot, view: newView } : p),
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                            {...ph, rootNode: newRoot, view: newView}
+                        )}
+                    )
                 };
             });
         },
 
         removeNode: (id) => {
             set(state => {
-                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-                const newRoot = removeFromTree(activeProj.rootNode, id);
-                const {[id]: _, ...newNodeLayouts} = activeProj.view.nodeLayouts;
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+                const newRoot = removeFromTree(activePhase.rootNode, id);
+                const {[id]: _, ...newNodeLayouts} = activePhase.view.nodeLayouts;
                 const newView: ProjectView = {
                     nodeLayouts: newNodeLayouts,
                 }
                 return {
-                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot, view: newView } : p)
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                            {...ph, rootNode: newRoot, view: newView}
+                        )}
+                    )
                 };
             });
         },
 
         moveNode: (sourceId, targetId, position) => {
             set(state => {
-                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-                const root = activeProj.rootNode;
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+                const root = activePhase.rootNode;
 
                 if (sourceId === root.id) return state;
                 if (sourceId === targetId) return state;
@@ -345,8 +456,10 @@ const useBaseStore = create<BaseState>((set) => {
                 }
 
                 return {
-                    projects: state.projects.map(p =>
-                        p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                            {...ph, rootNode: newRoot}
+                        )}
                     )
                 };
             });
@@ -354,27 +467,19 @@ const useBaseStore = create<BaseState>((set) => {
 
         updateNodeName: (nodeId, name) => {
             set(state => {
-                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-                const isRoot = nodeId === activeProj.rootNode.id;
-
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+                const isRoot = nodeId === activePhase.rootNode.id;
                 if (isRoot) {
-                    // avoid repeated names
-                    const isDuplicate = state.projects.some(p =>
-                        p.id !== activeProj.id && p.name === name
-                    );
-
-                    if (isDuplicate) {
-                        alert(`项目名称 "${name}" 已存在，请使用其他名称。`);
-                        return state; // 直接返回原状态，不进行更新
-                    }
+                    return state;
                 }
 
-                const newRoot = updateTree(activeProj.rootNode, nodeId, n => { n.name = name; });
-                let newName = activeProj.name;
-                if (isRoot) newName = name;
+                const newRoot = updateTree(activePhase.rootNode, nodeId, n => { n.name = name; });
                 return {
-                    projects: state.projects.map(p =>
-                        p.id === state.activeProjectId ? { ...p, rootNode: newRoot, name: newName } : p
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                            {...ph, rootNode: newRoot}
+                        )}
                     )
                 };
             });
@@ -382,10 +487,15 @@ const useBaseStore = create<BaseState>((set) => {
 
         updateNodeRule: (nodeId, rule) => {
             set(state => {
-                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-                const newRoot = updateTree(activeProj.rootNode, nodeId, n => { n.rule = { ...n.rule, ...rule }; });
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+                const newRoot = updateTree(activePhase.rootNode, nodeId, n => { n.rule = { ...n.rule, ...rule }; });
                 return {
-                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p)
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                            {...ph, rootNode: newRoot}
+                        )}
+                    )
                 };
             });
         },
@@ -393,7 +503,9 @@ const useBaseStore = create<BaseState>((set) => {
         toggleNodeLayout: (id) => {
             set(state => {
                 let newLayout: NodeLayoutType;
-                switch (state.projects.find(p => p.id === state.activeProjectId)!.view.nodeLayouts[id]) {
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+                switch (activePhase.view.nodeLayouts[id]) {
                     case 'collapsed':
                         newLayout = 'vertical';
                         break;
@@ -404,13 +516,13 @@ const useBaseStore = create<BaseState>((set) => {
                         newLayout = 'collapsed';
                         break;
                 }
-                const activeProject = state.projects.find(p => p.id === state.activeProjectId)!;
-                const newNodeLayouts = {...activeProject.view.nodeLayouts, [id]: newLayout};
-                console.log(`toggle node layout ${newLayout}`);
+                const newNodeLayouts = {...activePhase.view.nodeLayouts, [id]: newLayout};
+                // console.log(`toggle node layout ${newLayout}`);
                 return {
-                    projects: state.projects.map(p => 
-                        p.id !== state.activeProjectId ? p :
-                            {...p, view: {...p.view, nodeLayouts: newNodeLayouts}}
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                            {...ph, view: {...ph.view, nodeLayouts: newNodeLayouts}}
+                        )}
                     )
                 }
             });
@@ -423,8 +535,9 @@ const useBaseStore = create<BaseState>((set) => {
         copyNode: () => {
             set(state => {
                 if (state.selectedNodeId === null) return state;
-                const activeProject = state.projects.find(p => p.id === state.activeProjectId)!;
-                const nodeToCopy = findNode(activeProject.rootNode, state.selectedNodeId);
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+                const nodeToCopy = findNode(activePhase.rootNode, state.selectedNodeId);
                 if (nodeToCopy === null) return state;
                 return {
                     clipboard: structuredClone(nodeToCopy)
@@ -436,20 +549,26 @@ const useBaseStore = create<BaseState>((set) => {
             set(state => {
                 if (state.selectedNodeId === null) return state;
                 if (state.clipboard === null) return state;
-                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+                const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+                const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+
                 const {node: cb, ids} = cloneNodeNewIds(state.clipboard);
-                const newRoot = updateTree(activeProj.rootNode, state.selectedNodeId, n => {
+                const newRoot = updateTree(activePhase.rootNode, state.selectedNodeId, n => {
                     n.children = [...n.children, cb];
                 });
                 const newView: ProjectView = {
                     nodeLayouts: {
-                        ...activeProj.view.nodeLayouts,
+                        ...activePhase.view.nodeLayouts,
                         ...ids.reduce((obj, id) => {obj[id] = 'vertical';return obj;}, {} as Record<string, NodeLayoutType>)
                     },
                 }
 
                 return {
-                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot, view: newView } : p),
+                    projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
+                        {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
+                            {...ph, rootNode: newRoot, view: newView}
+                        )}
+                    )
                 };
             })
         },
@@ -461,24 +580,22 @@ const useBaseStore = create<BaseState>((set) => {
 export const useStore = () => {
     const state = useBaseStore();
 
-    const activeProject = state.projects.find(p => p.id === state.activeProjectId) || state.projects[0];
-    const restValue = activeProject.preAllocations.reduce(
-        (prev, curr) => applyPreAllcation(activeProject.totalValue, prev, curr),
-        activeProject.totalValue
+    const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
+    const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
+    const restValue = activePhase.preAllocations.reduce(
+        (prev, curr) => applyPreAllcation(activePhase.phaseValue, prev, curr),
+        activePhase.phaseValue
     );
 
     const calculationResult = useMemo(() => {
-        return calculateTree(activeProject.rootNode, restValue);
-    }, [activeProject.rootNode, restValue]);
+        return calculateTree(activePhase.rootNode, restValue);
+    }, [activePhase.rootNode, restValue]);
 
     return {
         ...state,
-        rootNode: activeProject.rootNode,
-        preAllocations: activeProject.preAllocations,
-        totalValue: activeProject.totalValue,
+        activePhase,
+        activeProject,
         restValue: restValue,
-        name: activeProject.name,
-        view: activeProject.view,
-        calculationResult
+        calculationResult,
     };
 };

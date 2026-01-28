@@ -57,25 +57,25 @@ body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 50%, #fff5f5 100%);
-    min-height: 100vh;
+    width: 100%;
+    height: 100vh;
     color: var(--gray-800);
 }
 
 #root {
+    height: inherit;
     min-width: 100%;
 }
 
 .app {
-    min-height: 100vh;
+    height: inherit;
     display: flex;
     flex-direction: column;
-    min-width: 100%;
 }
 
 .app-header {
     background: white;
-    height: 60px;
-    padding: 0 16px;
+    height: fit-content;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -154,14 +154,17 @@ body {
     outline: none;
 }
 
-.panel-right {
+.panel-top {
     display: flex;
+    justify-content: center;
     flex-wrap: wrap;
     gap: 16px;
 }
 
 .action-group {
     display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 12px;
 }
 
@@ -195,30 +198,31 @@ body {
     height: 16px;
 }
 
-.divider-v {
-    width: 1px;
-    height: inherit;
+.divider-h {
+    height: 1px;
+    width: inherit;
     background-color: #e5e7eb;
 }
 
 /* === 统计面板 === */
 .stats-panel {
     display: flex;
+    flex-direction: column;
     justify-content: center;
-    gap: 56px;
+    gap: 32px;
     padding: 16px;
     background: rgba(255, 255, 255, 0.7);
     border-bottom: 1px solid var(--gray-200);
 }
 
 .stat-item {
+    width: max-content;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    background: white;
+    background: var(--gray-100);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
 }
 
 .stat-value {
@@ -256,19 +260,27 @@ body {
     color: var(--danger);
 }
 
+.app-bodypart {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
 .app-main {
     flex: 1;
-    overflow-x: scroll;
-    overflow-y: scroll;
-    min-width: 100%;
+    display: flex;
+    background: inherit;
+    overflow: scroll;
 }
 
 .tree-container {
+    margin-left: 120px; /* 边栏宽度 */
     padding: 16px;
     vertical-align: top;
     box-sizing: border-box;
-    width: fit-content;
-    min-width: 100%;
+    width: inherit;
+    display: flex;
+    height: 100%;
 }
 
 .zoom-controls {
@@ -393,7 +405,6 @@ body {
 .node-content {
     display: flex;
     flex-direction: column;
-    width: max-content;
     min-width: 0;
 }
 
@@ -405,6 +416,7 @@ body {
 .tree-children.horizontal {
     display: flex;
     flex-direction: row;
+    width: max-content;
 }
 
 .tree-children.vertical {
@@ -420,7 +432,7 @@ body {
    节点卡片样式
    ============================================ */
 
-.total-value-info {
+.phase-value-info {
     display: flex;
     flex-direction: column;
 }
@@ -476,7 +488,7 @@ body {
     align-items: center;
 }
 
-.preallocation-value.total-value {
+.preallocation-value.phase-value {
     color: var(--primary);
 }
 
@@ -496,14 +508,13 @@ body {
     height: 20px;
     width: 20px;
     border: none;
-    background-color: #72fbcd;
+    background-color: white;
     color: black;
     border-radius: 20%;
 }
 
 .add-preallocation-button:hover {
-    background-color: #059669;
-    color: white;
+    background-color: var(--gray-200);
     transition: ease 0.15s;
 }
 
@@ -836,13 +847,15 @@ body {
 }
 
 /* --- Tabs Bar --- */
+.tabs-container {
+    width: 100%;
+}
 .tabs-bar {
-    background-color: white;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 0 20px;
+    background-color: var(--gray-200);
     padding-top: 10px;
     flex: 1;
     display: flex;
+    align-items: center;
     gap: 8px;
     overflow-x: auto;
 }
@@ -853,13 +866,13 @@ body {
 }
 
 .tab-item {
+    min-width: 120px;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 4px 16px;
-    background: #e2e8f0;
+    padding: 4px 24px;
+    background: var(--gray-200);
     border-radius: 4px 4px 0 0;
-    border: 1px solid var(--gray-400);
-    border-bottom: none;
     cursor: pointer;
     font-size: 14px;
     color: #64748b;
@@ -874,7 +887,6 @@ body {
 .tab-item.active {
     background: white;
     color: #2563eb;
-    border-bottom: none;
     font-weight: 600;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.02);
     z-index: 1000;
@@ -888,8 +900,8 @@ body {
 
 .tab-close {
     margin-left: 8px;
-    width: 16px;
-    height: 16px;
+    width: 24px;
+    aspect-ratio: 1 !important;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -914,6 +926,99 @@ body {
 
 .add-tab-btn:hover {
     color: #2563eb;
+}
+
+.value-group {
+    display: flex;
+    flex-direction: column;
+    padding: 0 8px;
+}
+
+.phase-name {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.phase-input {
+    background-color: inherit;
+    border: none;
+    border-bottom: 2px solid var(--gray-400);
+    font-weight: bold;
+    font-size: 1.1rem;
+    padding: 6px;
+    width: 150px;
+    margin: auto;
+}
+
+.phase-bar {
+    display: flex;
+    background-color: white;
+    border-top: none;
+    gap: 12px;
+    padding: 8px;
+}
+
+.phase-list {
+    display: flex;
+    gap: 12px;
+}
+
+.phase-item {
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    padding: 4px 8px;
+}
+
+.phase-item.active {
+    background-color: #eafaff;
+}
+
+.phase-close {
+    height: 24px;
+    width: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+.phase-close:hover {
+    background-color: var(--danger);
+    border-radius: 50%;
+}
+
+.add-phase-btn {
+    width: 30px;
+    height: 50px;
+    background-color: #d0ffce;
+    border: none;
+    border-radius: 8px;
+    align-self: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: var(--transition);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.add-phase-btn:hover {
+    background-color: #a1f89d;
+}
+
+.balance-value {
+    background-color: inherit;
+    border: none;
+    border-bottom: 2px solid var(--gray-400);
+    font-weight: bold;
+    font-size: 1.1rem;
+    padding: 6px;
+    width: 150px;
+    margin: auto;
 }
 
 /* --- Summary Modal --- */
@@ -942,7 +1047,7 @@ body {
 }
 
 .modal-header {
-    padding: 20px;
+    padding: 20px 0;
     border-bottom: 1px solid #e2e8f0;
     display: flex;
     justify-content: space-between;
@@ -1046,8 +1151,7 @@ body {
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background: #8b5cf6;
-    color: white;
+    background: #fffd9d;
     border: none;
     border-radius: 6px;
     font-weight: 500;
@@ -1057,7 +1161,7 @@ body {
 }
 
 .summary-btn:hover {
-    background: #7c3aed;
+    background: #faf871;
 }
 
 @media (max-width: 768px) {

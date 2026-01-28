@@ -50,7 +50,7 @@ const SummaryModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                         <div className="source-tags">
                                             {person.sources.map((src, idx) => (
                                                 <div key={idx} className="source-tag">
-                                                    <span className="src-name">{src.projectName}</span>
+                                                    <span className="src-name">{src.path.reduce((curr, nodeName) => curr+'->'+nodeName, '')}</span>
                                                     <span className="src-val">{formatMoney(src.amount)}</span>
                                                 </div>
                                             ))}

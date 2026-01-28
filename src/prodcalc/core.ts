@@ -1,5 +1,7 @@
 // src/core.ts
 
+import type { ProjectData } from "./store";
+
 // --- 类型定义 ---
 
 export const RuleType = {
@@ -101,7 +103,7 @@ export const calculateTree = (
 export interface PersonStat {
     name: string;
     totalAmount: number;
-    sources: { projectName: string; amount: number }[];
+    sources: { path: string[]; amount: number }[];
 }
 
 /**
@@ -110,46 +112,43 @@ export interface PersonStat {
  * @param calculateFn 计算函数引用
  */
 export const aggregateGlobalStats = (
-    projects: { name: string; rootNode: AllocNode; totalValue: number }[],
+    projects: ProjectData[],
     calculateFn: typeof calculateTree
 ): PersonStat[] => {
     const map = new Map<string, PersonStat>();
 
-    projects.forEach((proj) => {
-        // 1. 为每个项目计算结果
-        const results = calculateFn(proj.rootNode, proj.totalValue);
+    projects.forEach((pj) => {
+        pj.phases.forEach(ph => { 
+            const results = calculateFn(ph.rootNode, ph.phaseValue);
 
-        // 2. 遍历该项目所有节点，找到末端节点（叶子节点）
-        const traverse = (node: AllocNode) => {
-            const isLeaf = !node.children || node.children.length === 0;
+            const traverse = (node: AllocNode, path: string[]) => {
+                const isLeaf = !node.children || node.children.length === 0;
 
-            if (isLeaf) {
-                // 如果是末端节点，归集数据
-                const nodeResult = results[node.id];
-                if (!nodeResult) return;
+                if (isLeaf) {
+                    const nodeResult = results[node.id];
+                    if (!nodeResult) return;
 
-                const current = map.get(node.name) || {
-                    name: node.name,
-                    totalAmount: 0,
-                    sources: []
-                };
+                    const current = map.get(node.name) || {
+                        name: node.name,
+                        totalAmount: 0,
+                        sources: []
+                    };
 
-                current.totalAmount += nodeResult.amount;
-                current.sources.push({
-                    projectName: proj.name, // 使用项目名称（即根节点名称）
-                    amount: nodeResult.amount
-                });
+                    current.totalAmount += nodeResult.amount;
+                    current.sources.push({
+                        path: path,
+                        amount: nodeResult.amount
+                    });
 
-                map.set(node.name, current);
-            } else {
-                // 继续递归
-                node.children.forEach(traverse);
-            }
-        };
+                    map.set(node.name, current);
+                } else {
+                    node.children.forEach((child) => traverse(child, [...path, node.name]));
+                }
+            };
 
-        traverse(proj.rootNode);
+            traverse(ph.rootNode, [pj.name, ph.name]);
+        })
     });
 
-    // 转为数组并按金额倒序排列
     return Array.from(map.values()).sort((a, b) => b.totalAmount - a.totalAmount);
 };

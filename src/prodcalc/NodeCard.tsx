@@ -68,7 +68,7 @@ const AddActionButton: React.FC<{
 }> = ({ addNode }) => {
     return <button
         className="action-btn add"
-        onClick={() => addNode('')}
+        onClick={(e) => {e.stopPropagation();addNode('');}}
         title="添加子节点"
     >
         <svg viewBox="0 0 14 14">
@@ -194,11 +194,9 @@ const handleDrop = (
 const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
     const {
         calculationResult,
-        preAllocations,
-        totalValue,
-        view,
+        activePhase,
+        updatePhaseName,
         addNode,
-        updateNodeName,
         moveNode,
         addPreAllocation,
         removePreAllocation,
@@ -211,7 +209,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
 
     const result = calculationResult[node.id] || { amount: 0, percentOfParent: 0, isError: false };
     const hasChildren = node.children.length > 0;
-    const layoutType = view.nodeLayouts[node.id];
+    const layoutType = activePhase.view.nodeLayouts[node.id];
 
     // 生成 class
     const dragClass = dragPosition ? 'drag-inside' : '';
@@ -224,31 +222,32 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                         className={`node-card-content root-card ${dragClass}`}
                         draggable={false}
                         onDragOver={(e) => handleDragOver(e, true, dragPosition, setDragPosition)}
+                        onDragLeave={(e) => handleDragLeave(e, setDragPosition)}
                         onDrop={(e) => handleDrop(e, node, dragPosition, setDragPosition, moveNode)}
                     >
                         {hasChildren && <FoldButton toggleNodeLayout={() => toggleNodeLayout(node.id)} layoutType={layoutType} />}
 
                         <div className="root-card-info">
                             <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-                                <div className="total-value-info">
+                                <div className="phase-value-info">
                                     <input
                                         className="preallocation-name-input"
-                                        value={node.name}
-                                        onChange={(e) => updateNodeName(node.id, e.target.value)}
+                                        value={activePhase.name}
+                                        onChange={(e) => updatePhaseName(activePhase.id, e.target.value)}
                                         placeholder="输入名称"
                                     />
-                                    <div className="preallocation-value total-value">{formatMoney(totalValue)}</div>
+                                    <div className="preallocation-value phase-value">{formatMoney(activePhase.phaseValue)}</div>
                                 </div>
-                                {preAllocations.map(pa => {
+                                {activePhase.preAllocations.map(pa => {
                                     let preAllocationValue, preAllocationPercentage;
                                     switch (pa.rule.type) {
                                         case 'FIXED':
                                             preAllocationValue = pa.rule.value;
-                                            preAllocationPercentage = pa.rule.value / totalValue;
+                                            preAllocationPercentage = pa.rule.value / activePhase.phaseValue;
                                             break;
 
                                         case 'PERCENTAGE':
-                                            preAllocationValue = totalValue * pa.rule.value / 100;
+                                            preAllocationValue = activePhase.phaseValue * pa.rule.value / 100;
                                             preAllocationPercentage = pa.rule.value / 100;
                                     }
                                     return <Fragment key={pa.id}>
@@ -354,8 +353,8 @@ const NodeCard: React.FC<{
 }> = ({ node, level }) => {
     const {
         calculationResult,
-        view,
         selectedNodeId,
+        activePhase,
         selectNode,
         updateNodeRule,
         addNode,
@@ -371,7 +370,7 @@ const NodeCard: React.FC<{
     const result = calculationResult[node.id] || { amount: 0, percentOfParent: 0, isError: false };
     const hasChildren = node.children.length > 0;
     const selected = node.id === selectedNodeId;
-    const layoutType = view.nodeLayouts[node.id];
+    const layoutType = activePhase.view.nodeLayouts[node.id];
     const ruleConfig = RULE_CONFIG[node.rule.type];
 
     // 生成 class

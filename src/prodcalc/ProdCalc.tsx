@@ -62,10 +62,7 @@ const useGlobalShortcuts = () => {
 };
 
 export default function ProdCalc() {
-    const {
-        rootNode, projects, activeProjectId,
-        addProject, switchProject, removeProject, selectNode,
-    } = useStore();
+    const { activePhase, selectNode } = useStore();
 
     const [scale, setScale] = useState(1.0);
     const [isSummaryOpen, setSummaryOpen] = useState(false);
@@ -77,37 +74,21 @@ export default function ProdCalc() {
             <SummaryModal isOpen={isSummaryOpen} onClose={() => setSummaryOpen(false)} />
 
             <header className="app-header">
-                <div className="header-left">
-                    <div className="title-group">
-                        <h1>产值分配计算器</h1>
-                    </div>
-                </div>
-                <button className="summary-btn" onClick={() => setSummaryOpen(true)}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
-                    </svg>
-                    汇总报表
-                </button>
-                <TabsBar
-                    projects={projects}
-                    activeProjectId={activeProjectId}
-                    addProject={addProject}
-                    switchProject={switchProject}
-                    removeProject={removeProject}
-                />
-
+                <TabsBar />
             </header>
 
-            <StatsPanel />
 
-            <main className="app-main">
-                <div className="tree-container" style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }}>
-                    {/* 加个 key 强制切换项目时重新渲染动画 */}
-                    <RootNodeCard key={rootNode.id} node={rootNode} />
-                </div>
+            <div className="app-bodypart">
+                <StatsPanel setSummaryOpen={setSummaryOpen} />
+                <main className="app-main">
+                    <div className="tree-container" style={{ transform: `scale(${scale})`, transformOrigin: '0 0' }}>
+                        {/* 加个 key 强制切换项目时重新渲染动画 */}
+                        <RootNodeCard key={activePhase.rootNode.id} node={activePhase.rootNode} />
+                    </div>
+                </main>
 
                 <Zoomer scale={scale} setScale={setScale} />
-            </main>
+            </div>
 
         </div>
     );

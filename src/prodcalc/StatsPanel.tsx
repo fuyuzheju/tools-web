@@ -1,27 +1,20 @@
 import React from "react";
-import { useStore, type NodeLayoutType } from "./store";
+import { useStore } from "./store";
 import { useMemo, useRef } from "react";
 import { saveData } from "./file";
 import { type AllocNode } from "./core";
 
 type AppStatus = 'error' | 'warning' | 'normal';
 
-function StatsPanel() {
+function StatsPanel({setSummaryOpen}:{setSummaryOpen: (open: boolean) => void}) {
     const {
-        totalValue, setTotalValue, calculationResult, rootNode,
-        preAllocations, activeProjectId, name, view, loadProject,
+        calculationResult, activePhase,
+        activeProject, loadProject,
     } = useStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleSaveFile = () => {
-        saveData({
-            id: activeProjectId,
-            name: name,
-            totalValue: totalValue,
-            preAllocations: preAllocations,
-            rootNode: rootNode,
-            view: view,
-        }, `${rootNode.name || 'allocation'}-data.json`);
+        saveData(activeProject, `${activeProject.name || 'allocation'}-data.json`);
     }
 
     const handleOpenFile = () => {
@@ -38,21 +31,7 @@ function StatsPanel() {
                 const json = event.target?.result as string;
                 const data = JSON.parse(json);
 
-                // recover views
-                if (!('view' in data)) {
-                    const nodeLayouts: Record<string, NodeLayoutType> = {};
-                    const nodeStack: AllocNode[] = [];
-                    nodeStack.push(data.rootNode)
-                    while (nodeStack.length > 0) {
-                        const currentNode = nodeStack.pop()!;
-                        nodeLayouts[currentNode.id] = 'collapsed';
-                        for (const child of currentNode.children) {
-                            nodeStack.push(child);
-                        }
-                    }
-                    data.view = {nodeLayouts: nodeLayouts};
-                }
-                if (typeof data.totalValue === 'number' && data.rootNode && data.rootNode.id) {
+                if (typeof data.totalValue === 'number' && data.phases && data.phases[0].rootNode) {
                     loadProject(data);
                 } else {
                     alert('文件格式错误：无法识别的数据结构');
@@ -88,52 +67,25 @@ function StatsPanel() {
         else if (hasWarning) currentStatus = 'warning';
 
         const config = {
-            error: { label: '存在超额', icon: '️❌' },
-            warning: { label: '有未分配', icon: '⚠️' },
-            normal: { label: '分配完美', icon: '✅' }
+            error: { label: '存在\n超额', icon: '️❌' },
+            warning: { label: '有未\n分配', icon: '⚠️' },
+            normal: { label: '分配\n完美', icon: '✅' }
         };
 
         return {
             stats: {
-                totalNodes: countNodes(rootNode),
-                leafCount: countLeaves(rootNode),
+                totalNodes: countNodes(activePhase.rootNode),
+                leafCount: countLeaves(activePhase.rootNode),
             },
             appStatus: currentStatus,
             statusLabel: config[currentStatus].label,
             statusIcon: config[currentStatus].icon
         };
-    }, [calculationResult, rootNode]);
+    }, [calculationResult, activePhase]);
 
     return (
         <div className="stats-panel">
-            <div className="total-input-wrapper">
-                <label>当前项目总产值</label>
-                <div className="money-input-group">
-                    <span className="currency-symbol">¥</span>
-                    <input
-                        type="number"
-                        value={totalValue}
-                        onChange={(e) => setTotalValue(Number(e.target.value))}
-                        min={0}
-                    />
-                </div>
-            </div>
-            <div className="divider-v"></div>
-
-            <div className="stat-item">
-                <span className="stat-value">{stats.totalNodes}</span>
-                <span className="stat-label">总节点</span>
-            </div>
-            <div className="stat-item">
-                <span className="stat-value">{stats.leafCount}</span>
-                <span className="stat-label">末级分配</span>
-            </div>
-            <div className={`stat-item ${appStatus}`}>
-                <span className="stat-icon">{statusIcon}</span>
-                <span className="stat-label">{statusLabel}</span>
-            </div>
-            <div className="divider-v"></div>
-            <div className="panel-right">
+            <div className="panel-top">
                 <input
                     type="file"
                     ref={fileInputRef}
@@ -150,6 +102,26 @@ function StatsPanel() {
                         <span>保存</span>
                     </button>
                 </div>
+            </div>
+            <div className="divider-h"></div>
+            <button className="summary-btn" onClick={() => setSummaryOpen(true)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
+                </svg>
+                汇总
+            </button>
+            <div className="divider-h"></div>
+            <div className="stat-item">
+                <span className="stat-label">所有<br></br>节点</span>
+                <span className="stat-value">{stats.totalNodes}</span>
+            </div>
+            <div className="stat-item">
+                <span className="stat-label">末级<br></br>分配</span>
+                <span className="stat-value">{stats.leafCount}</span>
+            </div>
+            <div className={`stat-item ${appStatus}`}>
+                <span className="stat-label" style={{whiteSpace: 'pre-line'}}>{statusLabel}</span>
+                <span className="stat-icon">{statusIcon}</span>
             </div>
         </div>
     );
