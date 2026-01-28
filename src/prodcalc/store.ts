@@ -101,7 +101,7 @@ const findNode = (node: AllocNode, id: string): AllocNode | null => {
 
 const cloneNodeNewIds = (node: AllocNode): {node: AllocNode, ids: string[]} => {
     const props = node.children.map(cloneNodeNewIds);
-    const newId = Math.random().toString(36);
+    const newId = crypto.randomUUID();
     return {
         node: {
             ...node,
@@ -146,7 +146,7 @@ const removeFromTree = (root: AllocNode, targetId: string): AllocNode => {
 };
 
 const useBaseStore = create<BaseState>((set) => {
-    const initialId = Math.random().toString(36);
+    const initialId = crypto.randomUUID();
 
     return {
         projects: [createDefaultProject(initialId, 'horizontal', '新项目')],
@@ -156,7 +156,7 @@ const useBaseStore = create<BaseState>((set) => {
 
         addProject: () => {
             set(state => {
-                const newId = Math.random().toString(36);
+                const newId = crypto.randomUUID();
                 return {
                     projects: [...state.projects, createDefaultProject(newId, 'horizontal', `新项目`)],
                     activeProjectId: newId,
@@ -217,7 +217,7 @@ const useBaseStore = create<BaseState>((set) => {
 
         addPreAllocation: () => {
             const newPreAllocation: PreAllocation = {
-                id: Math.random().toString(36),
+                id: crypto.randomUUID(),
                 name: '',
                 rule: { type: "PERCENTAGE", value: 10 },
             }
@@ -269,7 +269,7 @@ const useBaseStore = create<BaseState>((set) => {
         addNode: (parentId, name) => {
             set(state => {
                 const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
-                const newId = Math.random().toString(36);
+                const newId = crypto.randomUUID();
                 const newNode: AllocNode = {
                     id: newId,
                     name,

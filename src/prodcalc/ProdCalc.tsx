@@ -44,7 +44,9 @@ const useGlobalShortcuts = () => {
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 if (selectedNodeId) {
                     e.preventDefault();
-                    removeNode(selectedNodeId); 
+                    if (confirm("确定删除当前节点及其所有子节点吗？")) {
+                        removeNode(selectedNodeId);
+                    }
                     selectNode(null);
                 }
             }

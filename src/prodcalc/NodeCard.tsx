@@ -78,18 +78,14 @@ const AddActionButton: React.FC<{
 }
 
 const RemoveActionButton: React.FC<{
-    hasChildren: boolean,
     name: string,
     removeNode: () => void,
-}> = ({ hasChildren, name, removeNode }) => {
+}> = ({ name, removeNode }) => {
     return <button
         className="action-btn delete"
-        onClick={() => {
-            if (hasChildren) {
-                if (confirm(`确定删除"${name}"及其所有子节点吗？`)) {
-                    removeNode();
-                }
-            } else {
+        onClick={(e) => {
+            e.stopPropagation();
+            if (confirm(`确定删除"${name}"及其所有子节点吗？`)) {
                 removeNode();
             }
         }}
@@ -466,7 +462,7 @@ const NodeCard: React.FC<{
                     {/* 操作按钮 */}
                     <div className="node-actions">
                         <AddActionButton addNode={(name) => addNode(node.id, name)} />
-                        <RemoveActionButton hasChildren={hasChildren} name={node.name} removeNode={() => removeNode(node.id)} />
+                        <RemoveActionButton name={node.name} removeNode={() => removeNode(node.id)} />
                     </div>
                 </div>
             </div >
