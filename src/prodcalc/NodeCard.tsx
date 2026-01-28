@@ -359,6 +359,8 @@ const NodeCard: React.FC<{
     const {
         calculationResult,
         view,
+        selectedNodeId,
+        selectNode,
         updateNodeRule,
         addNode,
         updateNodeName,
@@ -372,6 +374,7 @@ const NodeCard: React.FC<{
 
     const result = calculationResult[node.id] || { amount: 0, percentOfParent: 0, isError: false };
     const hasChildren = node.children.length > 0;
+    const selected = node.id === selectedNodeId;
     const layoutType = view.nodeLayouts[node.id];
     const ruleConfig = RULE_CONFIG[node.rule.type];
 
@@ -387,8 +390,10 @@ const NodeCard: React.FC<{
             {/* 节点主卡片 */}
             <div className={`node-card ${isDragging ? 'dragging' : ''} children-${layoutType}`}>
                 <div className={`node-card-content 
-                          ${result.isError ? 'has-error' : ''} 
-                          ${dragClass}`}
+                            ${selected ? 'selected' : ''}
+                            ${result.isError ? 'has-error' : ''} 
+                            ${dragClass}`}
+                    onClick={(e)=>{e.stopPropagation();selectNode(selected ? null : node.id);}}
                     draggable={true}
                     onDragStart={(e) => handleDragStart(e, false, node, setIsDragging)}
                     onDragEnd={() => handleDragEnd(setIsDragging, setDragPosition)}
@@ -405,6 +410,7 @@ const NodeCard: React.FC<{
                         <input
                             className="name-input"
                             value={node.name}
+                            onClick={(e)=>e.stopPropagation()}
                             onChange={(e) => updateNodeName(node.id, e.target.value)}
                             placeholder="输入名称"
                         />

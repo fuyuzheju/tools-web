@@ -36,6 +36,8 @@ export type NodeLayoutType = 'collapsed' | 'horizontal' | 'vertical';
 interface BaseState {
     projects: ProjectData[];
     activeProjectId: string;
+    selectedNodeId: string | null;
+    clipboard: AllocNode | null;
 
     addProject: () => void;
     switchProject: (id: string) => void;
@@ -56,6 +58,10 @@ interface BaseState {
     updateNodeName: (id: string, name: string) => void;
     updateNodeRule: (id: string, rule: Partial<AllocNode['rule']>) => void;
     toggleNodeLayout: (id: string) => void;
+    selectNode: (id: string | null) => void;
+    copyNode: () => void;
+    pasteNode: () => void;
+
 }
 
 // --- 辅助函数 ---
@@ -92,6 +98,19 @@ const findNode = (node: AllocNode, id: string): AllocNode | null => {
     }
     return null;
 };
+
+const cloneNodeNewIds = (node: AllocNode): {node: AllocNode, ids: string[]} => {
+    const props = node.children.map(cloneNodeNewIds);
+    const newId = Math.random().toString(36);
+    return {
+        node: {
+            ...node,
+            id: newId,
+            children: props.map(p => p.node),
+        },
+        ids: [...(props.map(p => p.ids).flat()), newId],
+    }
+}
 
 const isDescendant = (sourceNode: AllocNode, targetId: string): boolean => {
     if (sourceNode.id === targetId) return true;
@@ -132,6 +151,8 @@ const useBaseStore = create<BaseState>((set) => {
     return {
         projects: [createDefaultProject(initialId, 'horizontal', '新项目')],
         activeProjectId: initialId,
+        selectedNodeId: null,
+        clipboard: null,
 
         addProject: () => {
             set(state => {
@@ -393,6 +414,44 @@ const useBaseStore = create<BaseState>((set) => {
                     )
                 }
             });
+        },
+
+        selectNode: (id) => {
+            set({selectedNodeId: id})
+        },
+
+        copyNode: () => {
+            set(state => {
+                if (state.selectedNodeId === null) return state;
+                const activeProject = state.projects.find(p => p.id === state.activeProjectId)!;
+                const nodeToCopy = findNode(activeProject.rootNode, state.selectedNodeId);
+                if (nodeToCopy === null) return state;
+                return {
+                    clipboard: structuredClone(nodeToCopy)
+                }
+            })
+        },
+
+        pasteNode: () => {
+            set(state => {
+                if (state.selectedNodeId === null) return state;
+                if (state.clipboard === null) return state;
+                const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
+                const {node: cb, ids} = cloneNodeNewIds(state.clipboard);
+                const newRoot = updateTree(activeProj.rootNode, state.selectedNodeId, n => {
+                    n.children = [...n.children, cb];
+                });
+                const newView: ProjectView = {
+                    nodeLayouts: {
+                        ...activeProj.view.nodeLayouts,
+                        ...ids.reduce((obj, id) => {obj[id] = 'vertical';return obj;}, {} as Record<string, NodeLayoutType>)
+                    },
+                }
+
+                return {
+                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot, view: newView } : p),
+                };
+            })
         },
 
     };

@@ -1,60 +1,77 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './ProdCalc.css';
-import { useStore, type ProjectData } from './store'; // 引入类型
+import { useStore } from './store'; // 引入类型
 import RootNodeCard from './NodeCard';
 import SummaryModal from './SummaryModal';
 import StatsPanel from './StatsPanel';
 import Zoomer from './Zoomer';
+import TabsBar from './TabsBar';
 
-interface Props {
-    projects: ProjectData[];
-    activeProjectId: string;
-    switchProject: (id: string) => void;
-    removeProject: (id: string) => void;
-    addProject: () => void;
-}
+const useGlobalShortcuts = () => {
+    const { 
+        selectedNodeId, 
+        copyNode, 
+        pasteNode, 
+        removeNode,
+        selectNode 
+    } = useStore();
 
-const TabsBar = ({ projects, activeProjectId, switchProject, removeProject, addProject }: Props) => {
-    return (
-        <div className="tabs-bar">
-            <div className="tabs-list">
-                {projects.map((proj, idx) => (
-                    <div
-                        key={proj.id}
-                        className={`tab-item ${proj.id === activeProjectId ? 'active' : ''}`}
-                        style={{transform: `translateX(-${idx*4}px)`}}
-                        onClick={() => switchProject(proj.id)}
-                    >
-                        <span className="tab-name">{proj.name}</span>
-                        {projects.length > 1 && (
-                            <span
-                                className="tab-close"
-                                onClick={(e) => { e.stopPropagation(); removeProject(proj.id); }}
-                            >
-                                &times;
-                            </span>
-                        )}
-                    </div>
-                ))}
-            </div>
-            <button className="add-tab-btn" onClick={addProject} title="新建项目">
-                +
-            </button>
-        </div>
-    )
-}
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // 1. 如果焦点在输入框或文本域内，不触发快捷键（保留系统的复制粘贴文本功能）
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                return;
+            }
+
+            const MacOS = /mac/i.test(navigator.userAgent);
+            const isCmdOrCtrl = MacOS ? e.metaKey : e.ctrlKey; // Windows用Ctrl, Mac用Command(Meta)
+
+            if (isCmdOrCtrl && e.key.toLowerCase() === 'c') {
+                if (selectedNodeId) {
+                    e.preventDefault();
+                    copyNode();
+                }
+            }
+
+            if (isCmdOrCtrl && e.key.toLowerCase() === 'v') {
+                if (selectedNodeId) {
+                    e.preventDefault();
+                    pasteNode();
+                }
+            }
+
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedNodeId) {
+                    e.preventDefault();
+                    removeNode(selectedNodeId); 
+                    selectNode(null);
+                }
+            }
+            
+            if (e.key === 'Escape') {
+                selectNode(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedNodeId, copyNode, pasteNode, removeNode, selectNode]);
+};
 
 export default function ProdCalc() {
     const {
         rootNode, projects, activeProjectId,
-        addProject, switchProject, removeProject
+        addProject, switchProject, removeProject, selectNode,
     } = useStore();
 
     const [scale, setScale] = useState(1.0);
-
     const [isSummaryOpen, setSummaryOpen] = useState(false);
+
+    useGlobalShortcuts();
+
     return (
-        <div className="app">
+        <div onClick={()=>selectNode(null)} className="app">
             <SummaryModal isOpen={isSummaryOpen} onClose={() => setSummaryOpen(false)} />
 
             <header className="app-header">

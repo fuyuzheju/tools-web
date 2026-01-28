@@ -31,7 +31,7 @@
     --radius: 8px;
     --radius-lg: 12px;
 
-    --transition: all 0.2s ease;
+    --transition: all 0.1s ease;
 
     /* 树形结构变量 */
     --tree-indent: 52px;
@@ -550,6 +550,13 @@ body {
 .node-card-content.root-card {
     background: linear-gradient(135deg, var(--gray-800), var(--gray-700));
     color: white;
+}
+
+.node-card-content.selected {
+    border-color: #3b82f6; /* 亮蓝色边框 */
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); /* 蓝色光晕 */
+    background-color: #f0f9ff; /* 极淡的蓝色背景，可选 */
+    z-index: 10; /* 确保选中节点浮在上方 */
 }
 
 .node-card-content.has-error {
