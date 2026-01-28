@@ -1,5 +1,5 @@
 import React from "react";
-import { useStore } from "./store";
+import { useStore, type NodeLayoutType } from "./store";
 import { useMemo, useRef } from "react";
 import { saveData } from "./file";
 import { type AllocNode } from "./core";
@@ -9,7 +9,7 @@ type AppStatus = 'error' | 'warning' | 'normal';
 function StatsPanel() {
     const {
         totalValue, setTotalValue, calculationResult, rootNode,
-        preAllocations, activeProjectId, name, loadProject,
+        preAllocations, activeProjectId, name, view, loadProject,
     } = useStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -20,6 +20,7 @@ function StatsPanel() {
             totalValue: totalValue,
             preAllocations: preAllocations,
             rootNode: rootNode,
+            view: view,
         }, `${rootNode.name || 'allocation'}-data.json`);
     }
 
@@ -37,11 +38,27 @@ function StatsPanel() {
                 const json = event.target?.result as string;
                 const data = JSON.parse(json);
 
+                // recover views
+                if (!('view' in data)) {
+                    const nodeLayouts: Record<string, NodeLayoutType> = {};
+                    const nodeStack: AllocNode[] = [];
+                    nodeStack.push(data.rootNode)
+                    while (nodeStack.length > 0) {
+                        const currentNode = nodeStack.pop()!;
+                        nodeLayouts[currentNode.id] = 'collapsed';
+                        for (const child of currentNode.children) {
+                            nodeStack.push(child);
+                        }
+                    }
+                    data.view = {nodeLayouts: nodeLayouts};
+                }
                 if (typeof data.totalValue === 'number' && data.rootNode && data.rootNode.id) {
                     loadProject(data);
                 } else {
                     alert('文件格式错误：无法识别的数据结构');
                 }
+
+
             } catch (err) {
                 alert('文件读取失败：无效的 JSON 文件');
                 console.error(err);

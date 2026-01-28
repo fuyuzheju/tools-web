@@ -23,14 +23,19 @@ export interface ProjectData {
     totalValue: number;
     preAllocations: PreAllocation[];
     rootNode: AllocNode;
+    view: ProjectView; // UI相关内容
+}
+
+export interface ProjectView {
+    nodeLayouts: Record<string, NodeLayoutType>;
 }
 
 export type DropPosition = 'inside' | 'before' | 'after';
+export type NodeLayoutType = 'collapsed' | 'horizontal' | 'vertical';
 
 interface BaseState {
     projects: ProjectData[];
     activeProjectId: string;
-    collapsedNodes: Set<string>; // UI 状态可以共享，或者根据 ID 存
 
     addProject: () => void;
     switchProject: (id: string) => void;
@@ -50,8 +55,7 @@ interface BaseState {
     moveNode: (sourceId: string, targetId: string, position: DropPosition) => void;
     updateNodeName: (id: string, name: string) => void;
     updateNodeRule: (id: string, rule: Partial<AllocNode['rule']>) => void;
-
-    toggleCollapse: (id: string) => void;
+    toggleNodeLayout: (id: string) => void;
 }
 
 // --- 辅助函数 ---
@@ -66,7 +70,7 @@ const findParent = (root: AllocNode, targetId: string): AllocNode | null => {
     return null;
 };
 
-const createDefaultProject = (id: string, name: string): ProjectData => ({
+const createDefaultProject = (id: string, layout: NodeLayoutType, name: string): ProjectData => ({
     id,
     name,
     totalValue: 1000000,
@@ -76,7 +80,8 @@ const createDefaultProject = (id: string, name: string): ProjectData => ({
         name: name,
         rule: { type: RuleType.FIXED, value: 0 },
         children: []
-    }
+    },
+    view: {nodeLayouts: {[`root-${id}`]: layout}}
 });
 
 const findNode = (node: AllocNode, id: string): AllocNode | null => {
@@ -122,25 +127,23 @@ const removeFromTree = (root: AllocNode, targetId: string): AllocNode => {
 };
 
 const useBaseStore = create<BaseState>((set) => {
-    const initialId = 'proj-1';
+    const initialId = Math.random().toString(36);
 
     return {
-        projects: [createDefaultProject(initialId, '新项目')],
+        projects: [createDefaultProject(initialId, 'horizontal', '新项目')],
         activeProjectId: initialId,
-        collapsedNodes: new Set(),
 
         addProject: () => {
             set(state => {
                 const newId = Math.random().toString(36);
                 return {
-                    projects: [...state.projects, createDefaultProject(newId, `新项目`)],
+                    projects: [...state.projects, createDefaultProject(newId, 'horizontal', `新项目`)],
                     activeProjectId: newId,
-                    collapsedNodes: new Set()
                 };
             });
         },
 
-        switchProject: (id) => set({ activeProjectId: id, collapsedNodes: new Set() }),
+        switchProject: (id) => set({ activeProjectId: id }),
 
         removeProject: (id) => {
             set(state => {
@@ -153,18 +156,22 @@ const useBaseStore = create<BaseState>((set) => {
 
         loadProject: (data) => {
             set(state => {
-                const newId = Math.random().toString(36);
-                const newProject = {
+                if (state.projects.find(p => p.id === data.id)) {
+                    return {
+                        activeProjectId: data.id,
+                    }
+                }
+                const newProject: ProjectData = {
                     id: data.id,
                     name: data.rootNode.name,
                     totalValue: data.totalValue,
                     preAllocations: data.preAllocations,
-                    rootNode: data.rootNode
+                    rootNode: data.rootNode,
+                    view: data.view,
                 };
                 return {
                     projects: [...state.projects, newProject],
-                    collapsedNodes: new Set(),
-                    activeProjectId: newId,
+                    activeProjectId: data.id,
                 }
             });
         },
@@ -251,12 +258,12 @@ const useBaseStore = create<BaseState>((set) => {
                 const newRoot = updateTree(activeProj.rootNode, parentId, n => {
                     n.children = [...n.children, newNode];
                 });
-                const newCollapsed = new Set(state.collapsedNodes);
-                newCollapsed.delete(parentId);
+                const newView: ProjectView = {
+                    nodeLayouts: {...activeProj.view.nodeLayouts, [newId]: 'vertical'},
+                }
 
                 return {
-                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p),
-                    collapsedNodes: newCollapsed
+                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot, view: newView } : p),
                 };
             });
         },
@@ -265,8 +272,12 @@ const useBaseStore = create<BaseState>((set) => {
             set(state => {
                 const activeProj = state.projects.find(p => p.id === state.activeProjectId)!;
                 const newRoot = removeFromTree(activeProj.rootNode, id);
+                const {[id]: _, ...newNodeLayouts} = activeProj.view.nodeLayouts;
+                const newView: ProjectView = {
+                    nodeLayouts: newNodeLayouts,
+                }
                 return {
-                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot } : p)
+                    projects: state.projects.map(p => p.id === state.activeProjectId ? { ...p, rootNode: newRoot, view: newView } : p)
                 };
             });
         },
@@ -358,11 +369,29 @@ const useBaseStore = create<BaseState>((set) => {
             });
         },
 
-        toggleCollapse: (id) => {
+        toggleNodeLayout: (id) => {
             set(state => {
-                const newSet = new Set(state.collapsedNodes);
-                if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
-                return { collapsedNodes: newSet };
+                let newLayout: NodeLayoutType;
+                switch (state.projects.find(p => p.id === state.activeProjectId)!.view.nodeLayouts[id]) {
+                    case 'collapsed':
+                        newLayout = 'vertical';
+                        break;
+                    case 'vertical':
+                        newLayout = 'horizontal';
+                        break;
+                    case 'horizontal':
+                        newLayout = 'collapsed';
+                        break;
+                }
+                const activeProject = state.projects.find(p => p.id === state.activeProjectId)!;
+                const newNodeLayouts = {...activeProject.view.nodeLayouts, [id]: newLayout};
+                console.log(`toggle node layout ${newLayout}`);
+                return {
+                    projects: state.projects.map(p => 
+                        p.id !== state.activeProjectId ? p :
+                            {...p, view: {...p.view, nodeLayouts: newNodeLayouts}}
+                    )
+                }
             });
         },
 
@@ -390,6 +419,7 @@ export const useStore = () => {
         totalValue: activeProject.totalValue,
         restValue: restValue,
         name: activeProject.name,
+        view: activeProject.view,
         calculationResult
     };
 };

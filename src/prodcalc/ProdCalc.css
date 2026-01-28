@@ -391,14 +391,10 @@ body {
 }
 
 .node-content {
-    width: max-content;
-    min-width: 0;
-}
-
-.node-content.is-root {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    width: max-content;
+    min-width: 0;
 }
 
 .tree-children {
@@ -414,6 +410,10 @@ body {
 .tree-children.vertical {
     display: flex;
     flex-direction: column;
+}
+
+.tree-children.collapsed {
+    display: none;
 }
 
 /* ============================================
@@ -521,6 +521,10 @@ body {
     width: fit-content;
     max-width: max-content;
     padding: calc(var(--node-gap)/2);
+}
+
+.node-card.children-horizontal {
+    align-self: center;
 }
 
 .node-card-content {

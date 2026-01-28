@@ -1,8 +1,8 @@
 import { RuleType, type AllocNode } from './core';
-import { useStore, type DropPosition } from './store';
+import { useStore, type DropPosition, type NodeLayoutType } from './store';
 import RULE_CONFIG from './config';
 import { PreAllocationRuleType } from './store';
-import { Fragment, useState } from 'react';
+import React, { Fragment, useState } from 'react';
 
 // --- 进度条组件 ---
 const ProgressBar: React.FC<{ percent: number; color: string }> = ({ percent, color }) => {
@@ -18,23 +18,49 @@ const ProgressBar: React.FC<{ percent: number; color: string }> = ({ percent, co
 };
 
 const FoldButton: React.FC<{
-    toggleCollapse: () => void,
-    isCollapsed: boolean,
-}> = ({ toggleCollapse, isCollapsed }) => {
+    toggleNodeLayout: () => void,
+    layoutType: NodeLayoutType,
+}> = ({ toggleNodeLayout, layoutType }) => {
+    let icon;
+    switch (layoutType) {
+        case 'collapsed':
+            icon = (
+                <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="6" cy="6" r="2.5" fill="none" stroke="#000000" strokeWidth="1" />
+                </svg>
+            );
+            break;
+
+        case 'horizontal':
+            icon = (
+                <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 3 L1 6 L4 9 M1 6 L11 6 M8 3 L11 6 L8 9"
+                        fill="none"
+                        stroke="#000000"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round" />
+                </svg>
+            );
+            break;
+
+        case 'vertical':
+            icon = (
+                <svg width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 4 L6 1 L9 4 M6 1 L6 11 M3 8 L6 11 L9 8"
+                        fill="none"
+                        stroke="#000000"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round" />
+                </svg>
+            );
+            break;
+    }
     return <button
         className="collapse-btn"
-        onClick={toggleCollapse}
-        title={isCollapsed ? '展开' : '折叠'}
-    >
-        <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
-        >
-            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" fill="none" strokeWidth="1.5" />
-        </svg>
-    </button>
+        onClick={toggleNodeLayout}
+    >{icon}</button>
 }
 
 const AddActionButton: React.FC<{
@@ -174,6 +200,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
         calculationResult,
         preAllocations,
         totalValue,
+        view,
         addNode,
         updateNodeName,
         moveNode,
@@ -181,29 +208,29 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
         removePreAllocation,
         updatePreAllocationName,
         updatePreAllocationRule,
-        collapsedNodes,
-        toggleCollapse
+        toggleNodeLayout,
     } = useStore();
 
     const [dragPosition, setDragPosition] = useState<DropPosition | null>(null);
 
     const result = calculationResult[node.id] || { amount: 0, percentOfParent: 0, isError: false };
     const hasChildren = node.children.length > 0;
-    const isCollapsed = collapsedNodes.has(node.id);
+    const layoutType = view.nodeLayouts[node.id];
 
     // 生成 class
     const dragClass = dragPosition ? 'drag-inside' : '';
 
     return (
         <div className="tree-node is-root">
-            <div className="node-content is-root">
-                <div className="node-card">
+            <div className="node-content">
+                <div className={`node-card children-${layoutType}`}>
                     <div
                         className={`node-card-content root-card ${dragClass}`}
                         draggable={false}
                         onDragOver={(e) => handleDragOver(e, true, dragPosition, setDragPosition)}
                         onDrop={(e) => handleDrop(e, node, dragPosition, setDragPosition, moveNode)}
                     >
+                        {hasChildren && <FoldButton toggleNodeLayout={() => toggleNodeLayout(node.id)} layoutType={layoutType} />}
 
                         <div className="root-card-info">
                             <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
@@ -298,8 +325,8 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                 </div>
 
                 {/* 子节点容器 */}
-                {hasChildren && !isCollapsed && (
-                    <div className="tree-children horizontal">
+                {hasChildren && (
+                    <div className={`tree-children ${layoutType}`}>
                         {node.children.map((child) => (
                             <NodeCard
                                 key={child.id}
@@ -311,8 +338,8 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                 )}
 
                 {/* 折叠提示 */}
-                {hasChildren && isCollapsed && (
-                    <div className="collapsed-hint" onClick={() => toggleCollapse(node.id)}>
+                {hasChildren && layoutType === 'collapsed' && (
+                    <div className="collapsed-hint" onClick={() => toggleNodeLayout(node.id)}>
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <path d="M5 3l4 4-4 4" />
                         </svg>
@@ -331,13 +358,13 @@ const NodeCard: React.FC<{
 }> = ({ node, level }) => {
     const {
         calculationResult,
+        view,
         updateNodeRule,
         addNode,
         updateNodeName,
         removeNode,
         moveNode,
-        collapsedNodes,
-        toggleCollapse
+        toggleNodeLayout
     } = useStore();
 
     const [dragPosition, setDragPosition] = useState<DropPosition | null>(null);
@@ -345,7 +372,7 @@ const NodeCard: React.FC<{
 
     const result = calculationResult[node.id] || { amount: 0, percentOfParent: 0, isError: false };
     const hasChildren = node.children.length > 0;
-    const isCollapsed = collapsedNodes.has(node.id);
+    const layoutType = view.nodeLayouts[node.id];
     const ruleConfig = RULE_CONFIG[node.rule.type];
 
     // 生成 class
@@ -358,7 +385,7 @@ const NodeCard: React.FC<{
         {/* 节点内容区域 */}
         <div className="node-content">
             {/* 节点主卡片 */}
-            <div className={`node-card ${isDragging ? 'dragging' : ''}`}>
+            <div className={`node-card ${isDragging ? 'dragging' : ''} children-${layoutType}`}>
                 <div className={`node-card-content 
                           ${result.isError ? 'has-error' : ''} 
                           ${dragClass}`}
@@ -371,7 +398,7 @@ const NodeCard: React.FC<{
                 >
 
                     {/* 折叠按钮 */}
-                    {hasChildren && <FoldButton toggleCollapse={() => toggleCollapse(node.id)} isCollapsed={isCollapsed} />}
+                    {hasChildren && <FoldButton toggleNodeLayout={() => toggleNodeLayout(node.id)} layoutType={layoutType} />}
 
                     {/* 中间：信息区 */}
                     <div className="node-info">
@@ -440,17 +467,19 @@ const NodeCard: React.FC<{
 
             {/* 子节点容器 */}
             {
-                hasChildren && !isCollapsed && (
-                    <div className={`tree-children vertical`}>
+                hasChildren && (
+                    <div className={`tree-children ${layoutType}`}>
                         {node.children.map((child, idx) => (
-                            <div 
+                            <div
                                 key={child.id}
                                 className={`tree-node ${idx === node.children.length - 1 ? 'is-last' : ''}`}>
-                                <div className="connector">
-                                    <div className="connector-v-top" />
-                                    {!(idx===node.children.length - 1) && <div className="connector-v-bottom" />}
-                                    <div className="connector-h" />
-                                </div>
+                                {layoutType === 'vertical' &&
+                                    <div className="connector">
+                                        <div className="connector-v-top" />
+                                        {!(idx === node.children.length - 1) && <div className="connector-v-bottom" />}
+                                        <div className="connector-h" />
+                                    </div>
+                                }
                                 <NodeCard
                                     node={child}
                                     level={level + 1}
@@ -463,8 +492,8 @@ const NodeCard: React.FC<{
 
             {/* 折叠提示 */}
             {
-                hasChildren && isCollapsed && (
-                    <div className="collapsed-hint" onClick={() => toggleCollapse(node.id)}>
+                hasChildren && layoutType === 'collapsed' && (
+                    <div className="collapsed-hint" onClick={() => toggleNodeLayout(node.id)}>
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <path d="M5 3l4 4-4 4" />
                         </svg>
@@ -472,7 +501,7 @@ const NodeCard: React.FC<{
                     </div>
                 )
             }
-        </div >
+        </div>
     </>
     );
 };
