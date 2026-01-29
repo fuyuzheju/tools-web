@@ -45,7 +45,7 @@ interface BaseState {
     activeProjectId: string;
     activePhaseId: string;
     selectedNodeId: string | null;
-    clipboard: AllocNode | null;
+    clipboard: {node: AllocNode, view: ProjectView} | null;
 
     addProject: () => void;
     switchProject: (id: string) => void;
@@ -124,7 +124,7 @@ const findNode = (node: AllocNode, id: string): AllocNode | null => {
     return null;
 };
 
-const cloneNodeNewIds = (node: AllocNode): {node: AllocNode, ids: string[]} => {
+const cloneNodeNewIds = (node: AllocNode): {node: AllocNode, ids: Record<string, string>} => {
     const props = node.children.map(cloneNodeNewIds);
     const newId = crypto.randomUUID();
     return {
@@ -133,18 +133,23 @@ const cloneNodeNewIds = (node: AllocNode): {node: AllocNode, ids: string[]} => {
             id: newId,
             children: props.map(p => p.node),
         },
-        ids: [...(props.map(p => p.ids).flat()), newId],
+        ids: {...(Object.assign({}, ...props.map(p => p.ids))), [node.id]: newId},
     }
 }
 
 const clonePhaseNewIds = (phase: PhaseData): PhaseData => {
     const {ids, node} = cloneNodeNewIds(phase.rootNode);
+    const newLayouts: Record<string, NodeLayoutType> = {};
+    Object.keys(ids).forEach(oldId => {
+        const newId = ids[oldId];
+        newLayouts[newId] = phase.view.nodeLayouts[oldId];
+    })
     return {
         ...phase,
         id: crypto.randomUUID(),
         rootNode: node,
         view: {
-            nodeLayouts: ids.reduce((obj, key) => {obj[key] = 'vertical'; return obj;}, {} as Record<string, NodeLayoutType>)
+            nodeLayouts: newLayouts,
         }
     }
 }
@@ -529,8 +534,20 @@ const useBaseStore = create<BaseState>((set) => {
                 const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
                 const nodeToCopy = findNode(activePhase.rootNode, state.selectedNodeId);
                 if (nodeToCopy === null) return state;
+
+                const copiedLayouts: Record<string, NodeLayoutType> = {};
+                // traverse
+                const nodeStack = [nodeToCopy];
+                while (nodeStack.length > 0) {
+                    const currentNode = nodeStack.pop()!;
+                    copiedLayouts[currentNode.id] = activePhase.view.nodeLayouts[currentNode.id];
+                    for (const child of currentNode.children) {
+                        nodeStack.push(child);
+                    }
+                }
+
                 return {
-                    clipboard: structuredClone(nodeToCopy)
+                    clipboard: structuredClone({node: nodeToCopy, view: {nodeLayouts: copiedLayouts}})
                 }
             })
         },
@@ -542,21 +559,20 @@ const useBaseStore = create<BaseState>((set) => {
                 const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
                 const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
 
-                const {node: cb, ids} = cloneNodeNewIds(state.clipboard);
+                const {node: cb, ids} = cloneNodeNewIds(state.clipboard.node);
                 const newRoot = updateTree(activePhase.rootNode, state.selectedNodeId, n => {
                     n.children = [...n.children, cb];
                 });
-                const newView: ProjectView = {
-                    nodeLayouts: {
-                        ...activePhase.view.nodeLayouts,
-                        ...ids.reduce((obj, id) => {obj[id] = 'vertical';return obj;}, {} as Record<string, NodeLayoutType>)
-                    },
-                }
+                const newLayouts: Record<string, NodeLayoutType> = activePhase.view.nodeLayouts;
+                Object.keys(ids).forEach(oldId => {
+                    const newId = ids[oldId];
+                    newLayouts[newId] = state.clipboard!.view.nodeLayouts[oldId];
+                })
 
                 return {
                     projects: state.projects.map(pj => pj.id !== state.activeProjectId ? pj :
                         {...pj, phases: pj.phases.map(ph => ph.id !== state.activePhaseId ? ph :
-                            {...ph, rootNode: newRoot, view: newView}
+                            {...ph, rootNode: newRoot, view: {...ph.view, nodeLayouts: newLayouts}}
                         )}
                     )
                 };
