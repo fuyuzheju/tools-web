@@ -68,7 +68,7 @@ const AddActionButton: React.FC<{
 }> = ({ addNode }) => {
     return <button
         className="action-btn add"
-        onClick={(e) => {e.stopPropagation();addNode('');}}
+        onClick={(e) => { e.stopPropagation(); addNode(''); }}
         title="添加子节点"
     >
         <svg viewBox="0 0 14 14">
@@ -133,6 +133,7 @@ const handleDragEnd = (
 const handleDragOver = (
     e: React.DragEvent,
     isRoot: boolean,
+    parentLayout: NodeLayoutType,
     dragPosition: DropPosition | null,
     setDragPosition: (dragPosition: DropPosition | null) => void,
 ) => {
@@ -140,7 +141,9 @@ const handleDragOver = (
     e.stopPropagation();
 
     const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    const width = rect.width;
     const height = rect.height;
 
     const threshold = 0.25;
@@ -150,10 +153,18 @@ const handleDragOver = (
     if (isRoot) {
         position = 'inside';
     } else {
-        if (y < height * threshold) {
-            position = 'before';
-        } else if (y > height * (1 - threshold)) {
-            position = 'after';
+        if (parentLayout === 'vertical') {
+            if (y < height * threshold) {
+                position = 'before';
+            } else if (y > height * (1 - threshold)) {
+                position = 'after';
+            }
+        } else if (parentLayout === 'horizontal') {
+            if (x < width * threshold) {
+                position = 'before';
+            } else if (x > width * (1 - threshold)) {
+                position = 'after';
+            }
         }
     }
 
@@ -191,38 +202,39 @@ const handleDrop = (
     moveNode(sourceId, node.id, position);
 };
 
-const ChildrenContainer: React.FC<{ level: number, layoutType: NodeLayoutType, node: AllocNode }> = ({level, layoutType, node}) => {
-    if (node.children.length === 0) return ;
+const ChildrenContainer: React.FC<{ level: number, layoutType: NodeLayoutType, node: AllocNode }> = ({ level, layoutType, node }) => {
+    if (node.children.length === 0) return;
     return (<>
-            {layoutType === 'horizontal' && <div className="h-connector-v-top"></div>}
-            <div className={`tree-children ${layoutType}`}>
-                {node.children.map((child, idx) => (
-                    <div
-                        key={child.id}
-                        className={`tree-node ${layoutType}`}>
-                        {layoutType === 'vertical' &&
-                            <div className="v-connector">
-                                <div className="v-connector-v-top" />
-                                {!(idx === node.children.length - 1) && <div className="v-connector-v-bottom" />}
-                                <div className="v-connector-h" />
-                            </div>
-                        }
-                        {layoutType === 'horizontal' &&
-                            <div className="h-connector">
-                                {!(idx === 0) && <div className="h-connector-h-left" />}
-                                {!(idx === node.children.length - 1) && <div className="h-connector-h-right" />}
-                                <div className="h-connector-v-bottom" />
-                            </div>
-                        }
-                        <NodeCard
-                            node={child}
-                            level={level + 1}
-                        />
-                    </div>
-                ))}
-            </div>
-        </>
-        )
+        {layoutType === 'horizontal' && <div className="h-connector-v-top"></div>}
+        <div className={`tree-children ${layoutType}`}>
+            {node.children.map((child, idx) => (
+                <div
+                    key={child.id}
+                    className={`tree-node ${layoutType}`}>
+                    {layoutType === 'vertical' &&
+                        <div className="v-connector">
+                            <div className="v-connector-v-top" />
+                            {!(idx === node.children.length - 1) && <div className="v-connector-v-bottom" />}
+                            <div className="v-connector-h" />
+                        </div>
+                    }
+                    {layoutType === 'horizontal' &&
+                        <div className="h-connector">
+                            {!(idx === 0) && <div className="h-connector-h-left" />}
+                            {!(idx === node.children.length - 1) && <div className="h-connector-h-right" />}
+                            <div className="h-connector-v-bottom" />
+                        </div>
+                    }
+                    <NodeCard
+                        parentLayout={layoutType}
+                        node={child}
+                        level={level + 1}
+                    />
+                </div>
+            ))}
+        </div>
+    </>
+    )
 }
 
 const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
@@ -255,7 +267,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                     <div
                         className={`node-card-content root-card ${dragClass}`}
                         draggable={false}
-                        onDragOver={(e) => handleDragOver(e, true, dragPosition, setDragPosition)}
+                        onDragOver={(e) => handleDragOver(e, true, 'collapsed', dragPosition, setDragPosition)}
                         onDragLeave={(e) => handleDragLeave(e, setDragPosition)}
                         onDrop={(e) => handleDrop(e, node, dragPosition, setDragPosition, moveNode)}
                     >
@@ -374,7 +386,8 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
 const NodeCard: React.FC<{
     node: AllocNode;
     level: number;
-}> = ({ node, level }) => {
+    parentLayout: NodeLayoutType;
+}> = ({ node, level, parentLayout }) => {
     const {
         calculationResult,
         selectedNodeId,
@@ -400,8 +413,18 @@ const NodeCard: React.FC<{
     // 生成 class
     let dragClass = '';
     if (dragPosition === 'inside') dragClass = 'drag-inside';
-    if (dragPosition === 'before') dragClass = 'drag-top';
-    if (dragPosition === 'after') dragClass = 'drag-bottom';
+    switch (parentLayout) {
+        case 'collapsed':
+            break;
+        case 'horizontal':
+            if (dragPosition === 'after') dragClass = 'drag-right';
+            if (dragPosition === 'before') dragClass = 'drag-left';
+            break;
+        case 'vertical':
+            if (dragPosition === 'after') dragClass = 'drag-bottom';
+            if (dragPosition === 'before') dragClass = 'drag-top';
+            break;
+    }
 
     return (<>
         {/* 节点内容区域 */}
@@ -412,11 +435,11 @@ const NodeCard: React.FC<{
                             ${selected ? 'selected' : ''}
                             ${result.isError ? 'has-error' : ''} 
                             ${dragClass}`}
-                    onClick={(e)=>{e.stopPropagation();selectNode(selected ? null : node.id);}}
+                    onClick={(e) => { e.stopPropagation(); selectNode(selected ? null : node.id); }}
                     draggable={true}
                     onDragStart={(e) => handleDragStart(e, false, node, setIsDragging)}
                     onDragEnd={() => handleDragEnd(setIsDragging, setDragPosition)}
-                    onDragOver={(e) => handleDragOver(e, false, dragPosition, setDragPosition)}
+                    onDragOver={(e) => handleDragOver(e, false, parentLayout, dragPosition, setDragPosition)}
                     onDragLeave={(e) => handleDragLeave(e, setDragPosition)}
                     onDrop={(e) => handleDrop(e, node, dragPosition, setDragPosition, moveNode)}
                 >
@@ -429,7 +452,7 @@ const NodeCard: React.FC<{
                         <input
                             className="name-input"
                             value={node.name}
-                            onClick={(e)=>e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) => updateNodeName(node.id, e.target.value)}
                             placeholder="输入名称"
                         />

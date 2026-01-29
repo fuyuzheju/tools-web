@@ -41,7 +41,7 @@
     --tree-line-color: #cbd5e1;
     --node-card-width: 500px;
     /* 连接线颜色 */
-    --node-card-height: 90px;
+    --node-card-height: 95px;
     /* 节点卡片近似高度 */
     --node-center: 51px;
     /* node-card-height * 0.5 + node-gap */
@@ -590,6 +590,7 @@ body {
 .node-card {
     width: var(--node-card-width);
     height: var(--node-card-height);
+    padding: 2px;
 }
 
 .node-card.root-card {
@@ -651,6 +652,16 @@ body {
 .node-card-content.drag-bottom {
     border-bottom: 3px solid #2563eb;
     margin-bottom: -3px;
+}
+
+.node-card-content.drag-left {
+    border-left: 3px solid #2563eb;
+    margin-left: -3px;
+}
+
+.node-card-content.drag-right {
+    border-right: 3px solid #2563eb;
+    margin-right: -3px;
 }
 
 .node-card.dragging {
