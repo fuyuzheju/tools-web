@@ -344,7 +344,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                                 }
                                 )}
 
-                                <button className="add-preallocation-button" onClick={addPreAllocation}>+<br></br>预分配</button>
+                                <button className="add-preallocation-button" onClick={addPreAllocation}>预分配</button>
                             </div>
                             <div className="rest-value">
                                 = {formatMoney(result.amount)}

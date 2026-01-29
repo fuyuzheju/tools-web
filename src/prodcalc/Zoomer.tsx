@@ -10,7 +10,7 @@ function Zoomer({ scale, setScale }: Props) {
 
     const scalePercent = Math.round(scale * 100) + '%';
     return (
-        <div className="zoom-controls">
+        <div className="zoom-controls" onClick={(e)=>e.stopPropagation()}>
             <button className="zoom-btn" onClick={handleZoomOut} title="缩小">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <line x1="5" y1="12" x2="19" y2="12"></line>

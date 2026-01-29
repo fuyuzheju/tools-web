@@ -6,7 +6,7 @@ import { type AllocNode } from "./core";
 
 type AppStatus = 'error' | 'warning' | 'normal';
 
-function StatsPanel({setSummaryOpen}:{setSummaryOpen: (open: boolean) => void}) {
+function StatsPanel({ setSummaryOpen }: { setSummaryOpen: (open: boolean) => void }) {
     const {
         calculationResult, activePhase,
         activeProject, loadProject,
@@ -50,7 +50,7 @@ function StatsPanel({setSummaryOpen}:{setSummaryOpen: (open: boolean) => void}) 
     };
 
 
-    const { stats, appStatus, statusLabel, statusIcon } = useMemo(() => {
+    const { stats, appStatus, statusIcon } = useMemo(() => {
         const countNodes = (node: AllocNode): number =>
             1 + node.children.reduce((sum, c) => sum + countNodes(c), 0);
         const countLeaves = (node: AllocNode): number =>
@@ -66,10 +66,24 @@ function StatsPanel({setSummaryOpen}:{setSummaryOpen: (open: boolean) => void}) 
         if (hasError) currentStatus = 'error';
         else if (hasWarning) currentStatus = 'warning';
 
-        const config = {
-            error: { label: '存在\n超额', icon: '️❌' },
-            warning: { label: '有未\n分配', icon: '⚠️' },
-            normal: { label: '分配\n完美', icon: '✅' }
+        const icons = {
+            normal: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+            ),
+            warning: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="6" x2="12" y2="16" />
+                    <circle cx="12" cy="20" r="0.5" fill="currentColor" />
+                </svg>
+            ),
+            error: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            ),
         };
 
         return {
@@ -78,50 +92,54 @@ function StatsPanel({setSummaryOpen}:{setSummaryOpen: (open: boolean) => void}) 
                 leafCount: countLeaves(activePhase.rootNode),
             },
             appStatus: currentStatus,
-            statusLabel: config[currentStatus].label,
-            statusIcon: config[currentStatus].icon
+            statusIcon: icons[currentStatus]
         };
     }, [calculationResult, activePhase]);
 
     return (
         <div className="stats-panel">
-            <div className="panel-top">
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    accept=".json"
-                    onChange={handleFileChange}
-                />
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept=".json"
+                onChange={handleFileChange}
+            />
 
-                <div className="action-group">
-                    <button className="icon-btn secondary" onClick={handleOpenFile} title="导入当前页">
-                        <span>打开</span>
-                    </button>
-                    <button className="icon-btn secondary" onClick={handleSaveFile} title="保存当前页">
-                        <span>保存</span>
-                    </button>
-                </div>
-            </div>
-            <div className="divider-h"></div>
-            <button className="summary-btn" onClick={() => setSummaryOpen(true)}>
+            <button className="stat-item file-action" onClick={handleOpenFile} title="导入">
+                {/* <span>打开</span> */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    <polyline points="12 15 12 9" />
+                    <polyline points="9 12 12 9 15 12" />
+                </svg>
+
+            </button>
+            <button className="stat-item file-action" onClick={handleSaveFile} title="保存">
+                {/* save icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                    <polyline points="16 3 16 8" />
+                </svg>
+            </button>
+            <div className="panel-divider"></div>
+            <button className="stat-item summary-btn " onClick={() => setSummaryOpen(true)}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
                 </svg>
-                汇总
             </button>
-            <div className="divider-h"></div>
-            <div className="stat-item">
-                <span className="stat-label">所有<br></br>节点</span>
-                <span className="stat-value">{stats.totalNodes}</span>
-            </div>
-            <div className="stat-item">
-                <span className="stat-label">末级<br></br>分配</span>
-                <span className="stat-value">{stats.leafCount}</span>
-            </div>
+            <div className="panel-divider"></div>
             <div className={`stat-item ${appStatus}`}>
-                <span className="stat-label" style={{whiteSpace: 'pre-line'}}>{statusLabel}</span>
-                <span className="stat-icon">{statusIcon}</span>
+                {statusIcon}
+            </div>
+            <div className="panel-divider"></div>
+            <div className="stat-item" title="末端节点数量">
+                {stats.leafCount}
+            </div>
+            <div className="stat-item" title="总节点数量">
+                {stats.totalNodes}
             </div>
         </div>
     );
