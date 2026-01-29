@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useMemo } from 'react';
-import { type AllocNode, RuleType, calculateTree } from './core';
+import { type AllocNode, RuleType, calculatePhaseRestValue, calculateTree } from './core';
 
 export const PreAllocationRuleType = {
     FIXED: "FIXED",
@@ -153,16 +153,6 @@ const isDescendant = (sourceNode: AllocNode, targetId: string): boolean => {
     if (sourceNode.id === targetId) return true;
     return sourceNode.children.some(child => isDescendant(child, targetId));
 };
-
-const applyPreAllcation = (totalValue: number, previousValue: number, preAllocation: PreAllocation): number => {
-    if (preAllocation.rule.type === "FIXED") {
-        return previousValue - preAllocation.rule.value;
-    } else if (preAllocation.rule.type === "PERCENTAGE") {
-        return previousValue - preAllocation.rule.value / 100 * totalValue;
-    } else {
-        throw Error;
-    }
-}
 
 const updateTree = (root: AllocNode, targetId: string, updater: (node: AllocNode) => void): AllocNode => {
     const newRoot = { ...root, children: [...root.children] };
@@ -582,10 +572,7 @@ export const useStore = () => {
 
     const activeProject = state.projects.find(pj => pj.id === state.activeProjectId)!;
     const activePhase = activeProject.phases.find(ph => ph.id === state.activePhaseId)!;
-    const restValue = activePhase.preAllocations.reduce(
-        (prev, curr) => applyPreAllcation(activePhase.phaseValue, prev, curr),
-        activePhase.phaseValue
-    );
+    const restValue = calculatePhaseRestValue(activePhase);
 
     const calculationResult = useMemo(() => {
         return calculateTree(activePhase.rootNode, restValue);

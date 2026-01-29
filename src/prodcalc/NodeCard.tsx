@@ -231,7 +231,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                             <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
                                 <div className="phase-value-info">
                                     <input
-                                        className="preallocation-name-input"
+                                        className="preallocation-name-input phase-name"
                                         value={activePhase.name}
                                         onChange={(e) => updatePhaseName(activePhase.id, e.target.value)}
                                         placeholder="输入名称"
@@ -322,12 +322,22 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                 {/* 子节点容器 */}
                 {hasChildren && (
                     <div className={`tree-children ${layoutType}`}>
-                        {node.children.map((child) => (
-                            <NodeCard
+                        {node.children.map((child, idx) => (
+                            <div
                                 key={child.id}
-                                node={child}
-                                level={1}
-                            />
+                                className={`tree-node ${idx === node.children.length - 1 ? 'is-last' : ''}`}>
+                                {layoutType === 'vertical' &&
+                                    <div className="connector">
+                                        <div className="connector-v-top" />
+                                        {!(idx === node.children.length - 1) && <div className="connector-v-bottom" />}
+                                        <div className="connector-h" />
+                                    </div>
+                                }
+                                <NodeCard
+                                    node={child}
+                                    level={1}
+                                />
+                            </div>
                         ))}
                     </div>
                 )}

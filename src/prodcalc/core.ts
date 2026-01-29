@@ -1,6 +1,6 @@
 // src/core.ts
 
-import type { ProjectData } from "./store";
+import type { PhaseData, PreAllocation, ProjectData } from "./store";
 
 // --- 类型定义 ---
 
@@ -99,6 +99,23 @@ export const calculateTree = (
     return resultMap;
 };
 
+const applyPreAllcation = (phaseValue: number, previousValue: number, preAllocation: PreAllocation): number => {
+    switch (preAllocation.rule.type) {
+        case 'FIXED':
+            return previousValue - preAllocation.rule.value;
+        case 'PERCENTAGE':
+            return previousValue - preAllocation.rule.value / 100 * phaseValue;
+    }
+}
+
+export const calculatePhaseRestValue = (phase: PhaseData): number => {
+    const restValue = phase.preAllocations.reduce(
+        (prev, curr) => applyPreAllcation(phase.phaseValue, prev, curr),
+        phase.phaseValue
+    );
+    return restValue;
+}
+
 // --- 跨项目汇总逻辑 ---
 export interface PersonStat {
     name: string;
@@ -119,7 +136,9 @@ export const aggregateGlobalStats = (
 
     projects.forEach((pj) => {
         pj.phases.forEach(ph => { 
-            const results = calculateFn(ph.rootNode, ph.phaseValue);
+            const restValue = calculatePhaseRestValue(ph);
+            
+            const results = calculateFn(ph.rootNode, restValue);
 
             const traverse = (node: AllocNode, path: string[]) => {
                 const isLeaf = !node.children || node.children.length === 0;

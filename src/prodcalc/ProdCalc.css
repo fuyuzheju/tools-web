@@ -183,6 +183,7 @@ body {
 
 .icon-btn.secondary {
     background-color: white;
+    background-color: inherit;
     color: #4b5563;
     border: 1px solid #e5e7eb;
 }
@@ -435,6 +436,7 @@ body {
 .phase-value-info {
     display: flex;
     flex-direction: column;
+    color: #c9f1ff;
 }
 
 .preallocation-name-input {
@@ -462,6 +464,8 @@ body {
     width: 12px;
     padding: 0;
     background-color: var(--danger);
+    transition: 0.3s ease;
+    opacity: 0;
 }
 
 .remove-preallocation-button:hover {
@@ -475,7 +479,16 @@ body {
     background: var(--gray-200);
     border: 1px solid black;
     border-radius: var(--radius-sm);
-    transition: var(--transition);
+    transition: 0.3s ease;
+    opacity: 0;
+}
+
+.preallocation-info:hover .remove-preallocation-button {
+    opacity: 1;
+}
+
+.preallocation-info:hover .preallocation-value-input-group {
+    opacity: 1;
 }
 
 .preallocation-value {
@@ -486,10 +499,6 @@ body {
     font-size: 1.5rem;
     display: flex;
     align-items: center;
-}
-
-.preallocation-value.phase-value {
-    color: var(--primary);
 }
 
 .minus-char {
@@ -994,7 +1003,8 @@ body {
 .add-phase-btn {
     width: 30px;
     height: 50px;
-    background-color: #d0ffce;
+    /* background-color: #d0ffce; */
+    background-color: #ffe9cf;
     border: none;
     border-radius: 8px;
     align-self: center;
@@ -1007,7 +1017,7 @@ body {
 }
 
 .add-phase-btn:hover {
-    background-color: #a1f89d;
+    background-color: #fed7ab;
 }
 
 .balance-value {

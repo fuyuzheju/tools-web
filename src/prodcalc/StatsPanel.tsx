@@ -96,7 +96,7 @@ function StatsPanel({setSummaryOpen}:{setSummaryOpen: (open: boolean) => void}) 
 
                 <div className="action-group">
                     <button className="icon-btn secondary" onClick={handleOpenFile} title="导入当前页">
-                        <span>导入</span>
+                        <span>打开</span>
                     </button>
                     <button className="icon-btn secondary" onClick={handleSaveFile} title="保存当前页">
                         <span>保存</span>
