@@ -39,14 +39,16 @@
     --tree-line-offset: 16px;
     /* 连接线距左边距离 */
     --tree-line-color: #cbd5e1;
+    --node-card-width: 500px;
     /* 连接线颜色 */
-    --node-card-height: 70px;
+    --node-card-height: 90px;
     /* 节点卡片近似高度 */
     --node-center: 51px;
     /* node-card-height * 0.5 + node-gap */
     /* 节点中心位置 */
-    --node-gap: 16px;
+    --node-gap: 32px;
     /* 节点间距 */
+    --horizontal-gap: 42px;
 }
 
 * {
@@ -359,15 +361,19 @@ body {
     padding-left: 0;
 }
 
-.tree-node:not(.is-root) {
+.tree-node.vertical:not(.is-root) {
     padding-left: var(--tree-indent);
+}
+
+.tree-node.horizontal {
+    padding-top: calc(var(--horizontal-gap) / 2);
 }
 
 /* ============================================
    连接线样式
    ============================================ */
 
-.connector {
+.v-connector {
     position: absolute;
     left: 0;
     top: 0;
@@ -376,7 +382,7 @@ body {
     pointer-events: none;
 }
 
-.connector-v-top {
+.v-connector-v-top {
     position: absolute;
     left: var(--tree-line-offset);
     top: 0;
@@ -385,7 +391,7 @@ body {
     background: var(--tree-line-color);
 }
 
-.connector-v-bottom {
+.v-connector-v-bottom {
     position: absolute;
     left: var(--tree-line-offset);
     top: var(--node-center);
@@ -394,12 +400,55 @@ body {
     background: var(--tree-line-color);
 }
 
-.connector-h {
+.v-connector-h {
     position: absolute;
     left: var(--tree-line-offset);
     top: var(--node-center);
     width: calc(var(--tree-indent) - var(--tree-line-offset));
     height: 2px;
+    background: var(--tree-line-color);
+}
+
+.h-connector {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: calc(var(--node-gap) / 2);
+    pointer-events: none;
+}
+
+.h-connector-v-top {
+    flex-shrink: 0;
+    margin-left: calc(var(--node-card-width) / 2);
+    width: 2px;
+    height: calc(var(--node-gap) / 2);
+    background: var(--tree-line-color);
+}
+
+.h-connector-h-left {
+    position: absolute;
+    height: 2px;
+    width: calc(var(--node-card-width) / 2);
+    top: 0;
+    left: 0;
+    background: var(--tree-line-color);
+}
+
+.h-connector-h-right {
+    position: absolute;
+    height: 2px;
+    width: calc(100% - var(--node-card-width) / 2);
+    top: 0;
+    left: calc(var(--node-card-width) / 2);
+    background: var(--tree-line-color);
+}
+
+.h-connector-v-bottom {
+    position: absolute;
+    left: calc(var(--node-card-width) / 2);
+    width: 2px;
+    height: 100%;
     background: var(--tree-line-color);
 }
 
@@ -514,12 +563,14 @@ body {
 }
 
 .add-preallocation-button {
-    height: 20px;
-    width: 20px;
+    height: fit-content;
+    width: 25px;
     border: none;
+    margin-left: -20px;
+    margin-right: 20px;
     background-color: white;
     color: black;
-    border-radius: 20%;
+    border-radius: 4px;
 }
 
 .add-preallocation-button:hover {
@@ -537,20 +588,23 @@ body {
 }
 
 .node-card {
-    min-width: 430px;
-    width: fit-content;
-    max-width: max-content;
-    padding: calc(var(--node-gap)/2);
+    width: var(--node-card-width);
+    height: var(--node-card-height);
 }
 
-.node-card.children-horizontal {
-    align-self: center;
+.node-card.root-card {
+    width: fit-content;
+    min-width: var(--node-card-width);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: visible;
+    margin-top: 50px;
 }
 
 .node-card-content {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 16px;
     padding: 8px 20px;
     background: white;
@@ -559,7 +613,6 @@ body {
     border: 1px solid black;
     transition: var(--transition);
     position: relative;
-    min-height: var(--node-card-height);
 }
 
 .node-card-content:hover {
@@ -568,6 +621,7 @@ body {
 }
 
 .node-card-content.root-card {
+    height: fit-content;
     background: linear-gradient(135deg, var(--gray-800), var(--gray-700));
     color: white;
 }
@@ -657,6 +711,10 @@ body {
 .root-card .name-input {
     color: white;
     font-size: 1.1rem;
+}
+
+.root-card-info {
+    flex: 1;
 }
 
 .name-input:focus {
@@ -957,7 +1015,7 @@ body {
     border-bottom: 2px solid var(--gray-400);
     font-weight: bold;
     font-size: 1.1rem;
-    padding: 6px;
+    padding: 0;
     width: 150px;
     margin: auto;
 }
@@ -967,7 +1025,7 @@ body {
     background-color: white;
     border-top: none;
     gap: 12px;
-    padding: 8px;
+    padding: 4px;
 }
 
 .phase-list {
@@ -980,6 +1038,7 @@ body {
     display: flex;
     flex-direction: column;
     border-radius: 8px;
+    gap: 0;
     padding: 4px 8px;
 }
 

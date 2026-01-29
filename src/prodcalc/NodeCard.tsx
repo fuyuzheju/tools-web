@@ -191,6 +191,40 @@ const handleDrop = (
     moveNode(sourceId, node.id, position);
 };
 
+const ChildrenContainer: React.FC<{ level: number, layoutType: NodeLayoutType, node: AllocNode }> = ({level, layoutType, node}) => {
+    if (node.children.length === 0) return ;
+    return (<>
+            {layoutType === 'horizontal' && <div className="h-connector-v-top"></div>}
+            <div className={`tree-children ${layoutType}`}>
+                {node.children.map((child, idx) => (
+                    <div
+                        key={child.id}
+                        className={`tree-node ${layoutType}`}>
+                        {layoutType === 'vertical' &&
+                            <div className="v-connector">
+                                <div className="v-connector-v-top" />
+                                {!(idx === node.children.length - 1) && <div className="v-connector-v-bottom" />}
+                                <div className="v-connector-h" />
+                            </div>
+                        }
+                        {layoutType === 'horizontal' &&
+                            <div className="h-connector">
+                                {!(idx === 0) && <div className="h-connector-h-left" />}
+                                {!(idx === node.children.length - 1) && <div className="h-connector-h-right" />}
+                                <div className="h-connector-v-bottom" />
+                            </div>
+                        }
+                        <NodeCard
+                            node={child}
+                            level={level + 1}
+                        />
+                    </div>
+                ))}
+            </div>
+        </>
+        )
+}
+
 const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
     const {
         calculationResult,
@@ -216,8 +250,8 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
 
     return (
         <div className="tree-node is-root">
-            <div className="node-content">
-                <div className={`node-card children-${layoutType}`}>
+            <div className={`node-content ${layoutType}`}>
+                <div className="node-card root-card">
                     <div
                         className={`node-card-content root-card ${dragClass}`}
                         draggable={false}
@@ -228,7 +262,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                         {hasChildren && <FoldButton toggleNodeLayout={() => toggleNodeLayout(node.id)} layoutType={layoutType} />}
 
                         <div className="root-card-info">
-                            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '24px', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div className="phase-value-info">
                                     <input
                                         className="preallocation-name-input phase-name"
@@ -298,7 +332,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                                 }
                                 )}
 
-                                <button className="add-preallocation-button" onClick={addPreAllocation}>+</button>
+                                <button className="add-preallocation-button" onClick={addPreAllocation}>+<br></br>预分配</button>
                             </div>
                             <div className="rest-value">
                                 = {formatMoney(result.amount)}
@@ -320,27 +354,7 @@ const RootNodeCard: React.FC<{ node: AllocNode }> = ({ node }) => {
                 </div>
 
                 {/* 子节点容器 */}
-                {hasChildren && (
-                    <div className={`tree-children ${layoutType}`}>
-                        {node.children.map((child, idx) => (
-                            <div
-                                key={child.id}
-                                className={`tree-node ${idx === node.children.length - 1 ? 'is-last' : ''}`}>
-                                {layoutType === 'vertical' &&
-                                    <div className="connector">
-                                        <div className="connector-v-top" />
-                                        {!(idx === node.children.length - 1) && <div className="connector-v-bottom" />}
-                                        <div className="connector-h" />
-                                    </div>
-                                }
-                                <NodeCard
-                                    node={child}
-                                    level={1}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                )}
+                <ChildrenContainer node={node} layoutType={layoutType} level={0} />
 
                 {/* 折叠提示 */}
                 {hasChildren && layoutType === 'collapsed' && (
@@ -391,9 +405,9 @@ const NodeCard: React.FC<{
 
     return (<>
         {/* 节点内容区域 */}
-        <div className="node-content">
+        <div className={`node-content ${layoutType}`}>
             {/* 节点主卡片 */}
-            <div className={`node-card ${isDragging ? 'dragging' : ''} children-${layoutType}`}>
+            <div className={`node-card ${isDragging ? 'dragging' : ''}`}>
                 <div className={`node-card-content 
                             ${selected ? 'selected' : ''}
                             ${result.isError ? 'has-error' : ''} 
@@ -477,29 +491,7 @@ const NodeCard: React.FC<{
             </div >
 
             {/* 子节点容器 */}
-            {
-                hasChildren && (
-                    <div className={`tree-children ${layoutType}`}>
-                        {node.children.map((child, idx) => (
-                            <div
-                                key={child.id}
-                                className={`tree-node ${idx === node.children.length - 1 ? 'is-last' : ''}`}>
-                                {layoutType === 'vertical' &&
-                                    <div className="connector">
-                                        <div className="connector-v-top" />
-                                        {!(idx === node.children.length - 1) && <div className="connector-v-bottom" />}
-                                        <div className="connector-h" />
-                                    </div>
-                                }
-                                <NodeCard
-                                    node={child}
-                                    level={level + 1}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                )
-            }
+            <ChildrenContainer node={node} layoutType={layoutType} level={level} />
 
             {/* 折叠提示 */}
             {
