@@ -219,7 +219,7 @@ body {
     padding: 32px 8px;
     background: rgba(255, 255, 255, 0.7);
     border-bottom: 1px solid var(--gray-200);
-    overflow-y: scroll;
+    overflow-y: auto;
 }
 
 .stat-item {

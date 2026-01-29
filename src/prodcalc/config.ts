@@ -1,4 +1,4 @@
-import { RuleType } from "./core";
+import { RuleType } from "./data";
 
 const RULE_CONFIG = {
     [RuleType.PERCENTAGE]: { label: '比例', color: '#3b82f6', bg: '#eff6ff' },

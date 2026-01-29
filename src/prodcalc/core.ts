@@ -1,27 +1,9 @@
 // src/core.ts
 
-import type { PhaseData, PreAllocation, ProjectData } from "./store";
+import type { PhaseData, PreAllocation, ProjectData, AllocNode } from "./data";
+import { RuleType } from "./data";
 
 // --- 类型定义 ---
-
-export const RuleType = {
-    FIXED: "FIXED",
-    PERCENTAGE: "PERCENTAGE",
-    REMAINDER: "REMAINDER",
-} as const;
-export type RuleType = typeof RuleType[keyof typeof RuleType];
-
-export interface NodeRule {
-    type: RuleType;
-    value: number;
-}
-
-export interface AllocNode {
-    id: string;
-    name: string;
-    rule: NodeRule;
-    children: AllocNode[];
-}
 
 export type CalculationMap = Record<string, {
     amount: number;          // 最终分到的钱

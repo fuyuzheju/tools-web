@@ -1,4 +1,4 @@
-import type { ProjectData } from "./store";
+import type { ProjectData } from "./data";
 
 export const saveData = async (data: ProjectData, suggestedName: string) => {
     const jsonString = JSON.stringify(data, null, 2);

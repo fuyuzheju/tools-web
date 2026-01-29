@@ -1,7 +1,6 @@
-import { RuleType, type AllocNode } from './core';
-import { useStore, type DropPosition, type NodeLayoutType } from './store';
+import { useStore, type DropPosition } from './store';
 import RULE_CONFIG from './config';
-import { PreAllocationRuleType } from './store';
+import { PreAllocationRuleType, RuleType, type NodeLayoutType, type AllocNode } from './data';
 import React, { Fragment, useState } from 'react';
 
 // --- 进度条组件 ---
